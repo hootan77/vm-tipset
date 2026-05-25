@@ -28,6 +28,9 @@ export default function Header({ view, setView }) {
               <NavButton active={view === 'funfacts'} onClick={() => setView('funfacts')}>
                 Fun Facts
               </NavButton>
+              <NavButton active={view === 'balls'} onClick={() => setView('balls')}>
+                VM Bollar
+              </NavButton>
               {user?.isAdmin && (
                 <NavButton active={view === 'admin'} onClick={() => setView('admin')}>
                   Admin

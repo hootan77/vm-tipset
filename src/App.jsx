@@ -9,6 +9,7 @@ import KnockoutBracket from './components/KnockoutBracket';
 import Leaderboard from './components/Leaderboard';
 import Venues from './components/Venues';
 import FunFacts from './components/FunFacts';
+import WorldCupBalls from './components/WorldCupBalls';
 import UserManager from './components/UserManager';
 import ViewUserPredictions from './components/ViewUserPredictions';
 
@@ -116,6 +117,8 @@ function MainApp() {
         {view === 'venues' && <Venues />}
 
         {view === 'funfacts' && <FunFacts />}
+
+        {view === 'balls' && <WorldCupBalls />}
 
         {view === 'admin' && user.isAdmin && (
           <>
