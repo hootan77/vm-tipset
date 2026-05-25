@@ -64,6 +64,19 @@ export default function Venues() {
         </div>
       </div>
 
+      {VENUES.map(country => (
+        <div key={country.country} className="space-y-4">
+          <h4 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            {getCountryFlag(country.country)} {country.country}
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {country.stadiums.map(stadium => (
+              <StadiumCard key={stadium.name} stadium={stadium} />
+            ))}
+          </div>
+        </div>
+      ))}
+
       <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
         <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
           <h4 className="font-bold text-gray-800">Värdstäder</h4>
@@ -77,19 +90,6 @@ export default function Venues() {
           />
         </div>
       </div>
-
-      {VENUES.map(country => (
-        <div key={country.country} className="space-y-4">
-          <h4 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            {getCountryFlag(country.country)} {country.country}
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {country.stadiums.map(stadium => (
-              <StadiumCard key={stadium.name} stadium={stadium} />
-            ))}
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
