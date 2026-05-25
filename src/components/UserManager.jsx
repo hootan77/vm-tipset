@@ -1,0 +1,101 @@
+import { useState, useEffect } from 'react';
+import { API } from '../context/AuthContext';
+
+export default function UserManager({ onViewUser }) {
+  const [users, setUsers] = useState([]);
+  const [passwords, setPasswords] = useState({});
+  const [feedback, setFeedback] = useState({});
+
+  useEffect(() => {
+    fetch(`${API}/users`).then(r => r.json()).then(setUsers);
+  }, []);
+
+  const changePassword = async (userId) => {
+    const pw = passwords[userId];
+    if (!pw || pw.length < 4) {
+      setFeedback(f => ({ ...f, [userId]: 'Minst 4 tecken' }));
+      return;
+    }
+    const res = await fetch(`${API}/users/${userId}/password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw }),
+    });
+    if (res.ok) {
+      setFeedback(f => ({ ...f, [userId]: 'Sparat!' }));
+      setPasswords(p => ({ ...p, [userId]: '' }));
+      setTimeout(() => setFeedback(f => ({ ...f, [userId]: '' })), 2000);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+      <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-6 py-4">
+        <h3 className="text-white font-bold text-xl">Användare</h3>
+        <p className="text-indigo-200 text-sm">Hantera tippare, ändra lösenord och se deras tips</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase tracking-wider">
+              <th className="text-left py-3 px-4">Namn</th>
+              <th className="text-left py-3 px-4">Roll</th>
+              <th className="text-left py-3 px-4">Registrerad</th>
+              <th className="text-left py-3 px-4">Nytt lösenord</th>
+              <th className="text-center py-3 px-4">Visa tips</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map(u => (
+              <tr key={u.id} className="border-b last:border-0 hover:bg-gray-50">
+                <td className="py-3 px-4 font-semibold text-gray-800">{u.name}</td>
+                <td className="py-3 px-4">
+                  {u.isAdmin ? (
+                    <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">Admin</span>
+                  ) : (
+                    <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">{u.role || 'Spelare'}</span>
+                  )}
+                </td>
+                <td className="py-3 px-4 text-gray-500 text-xs">
+                  {u.created_at ? new Date(u.created_at).toLocaleDateString('sv-SE') : ''}
+                </td>
+                <td className="py-3 px-4">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nytt lösenord"
+                      className="w-32 px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
+                      value={passwords[u.id] || ''}
+                      onChange={e => setPasswords(p => ({ ...p, [u.id]: e.target.value }))}
+                    />
+                    <button
+                      onClick={() => changePassword(u.id)}
+                      className="px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700 transition-colors"
+                    >
+                      Spara
+                    </button>
+                    {feedback[u.id] && (
+                      <span className={`text-xs ${feedback[u.id] === 'Sparat!' ? 'text-green-600' : 'text-red-500'}`}>
+                        {feedback[u.id]}
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="py-3 px-4 text-center">
+                  {!u.isAdmin && (
+                    <button
+                      onClick={() => onViewUser(u)}
+                      className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs hover:bg-blue-100 transition-colors"
+                    >
+                      Visa
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
