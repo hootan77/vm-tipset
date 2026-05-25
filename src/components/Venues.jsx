@@ -64,6 +64,20 @@ export default function Venues() {
         </div>
       </div>
 
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+        <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
+          <h4 className="font-bold text-gray-800">Värdstäder</h4>
+        </div>
+        <div className="p-4">
+          <img
+            src="/stadiums/venues-map.webp"
+            alt="Karta över VM 2026 värdstäder"
+            className="w-full rounded-lg"
+            loading="lazy"
+          />
+        </div>
+      </div>
+
       {VENUES.map(country => (
         <div key={country.country} className="space-y-4">
           <h4 className="text-lg font-bold text-gray-800 flex items-center gap-2">
