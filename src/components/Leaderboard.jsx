@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { API } from '../context/AuthContext';
+import { useAuth, API } from '../context/AuthContext';
 
 const ROLES = ['Alla', 'Spelare', 'Ledare', 'Förälder', 'Syskon'];
 
 export default function Leaderboard() {
+  const { user } = useAuth();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState('Alla');
@@ -22,7 +23,9 @@ export default function Leaderboard() {
       .then(d => { setData(d); setLoading(false); });
   }
 
-  const filtered = roleFilter === 'Alla' ? data : data.filter(r => r.role === roleFilter);
+  const userOrg = user?.org;
+  const orgFiltered = userOrg ? data.filter(r => r.org === userOrg) : data;
+  const filtered = roleFilter === 'Alla' ? orgFiltered : orgFiltered.filter(r => r.role === roleFilter);
 
   if (loading) {
     return (
@@ -47,22 +50,24 @@ export default function Leaderboard() {
         </button>
       </div>
 
-      <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2 flex-wrap">
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Filtrera:</span>
-        {ROLES.map(r => (
-          <button
-            key={r}
-            onClick={() => setRoleFilter(r)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-              roleFilter === r
-                ? 'bg-emerald-600 text-white'
-                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
-            }`}
-          >
-            {r}
-          </button>
-        ))}
-      </div>
+      {userOrg !== 'QBank' && (
+        <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Filtrera:</span>
+          {ROLES.map(r => (
+            <button
+              key={r}
+              onClick={() => setRoleFilter(r)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                roleFilter === r
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+              }`}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <div className="p-8 text-center text-gray-500">

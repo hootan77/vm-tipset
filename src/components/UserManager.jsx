@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { API } from '../context/AuthContext';
 
 const ROLES = ['Spelare', 'Ledare', 'Förälder', 'Syskon'];
+const ORGS = ['', 'Enskede', 'QBank'];
 
 export default function UserManager({ onViewUser }) {
   const [users, setUsers] = useState([]);
@@ -41,6 +42,17 @@ export default function UserManager({ onViewUser }) {
     }
   };
 
+  const changeOrg = async (userId, org) => {
+    const res = await fetch(`${API}/users/${userId}/org`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ org }),
+    });
+    if (res.ok) {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, org: org || null } : u));
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
       <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-6 py-4">
@@ -53,6 +65,7 @@ export default function UserManager({ onViewUser }) {
             <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase tracking-wider">
               <th className="text-left py-3 px-4">Namn</th>
               <th className="text-left py-3 px-4">Roll</th>
+              <th className="text-left py-3 px-4">Organisation</th>
               <th className="text-left py-3 px-4">Registrerad</th>
               <th className="text-left py-3 px-4">Nytt lösenord</th>
               <th className="text-center py-3 px-4">Visa tips</th>
@@ -76,6 +89,17 @@ export default function UserManager({ onViewUser }) {
                       ))}
                     </select>
                   )}
+                </td>
+                <td className="py-3 px-4">
+                  <select
+                    value={u.org || ''}
+                    onChange={e => changeOrg(u.id, e.target.value)}
+                    className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none"
+                  >
+                    {ORGS.map(o => (
+                      <option key={o} value={o}>{o || '—'}</option>
+                    ))}
+                  </select>
                 </td>
                 <td className="py-3 px-4 text-gray-500 text-xs">
                   {u.created_at ? new Date(u.created_at).toLocaleDateString('sv-SE') : ''}

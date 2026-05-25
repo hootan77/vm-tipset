@@ -82,6 +82,7 @@ try { db.exec("ALTER TABLE users ADD COLUMN display_name TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN username TEXT"); } catch(e) {}
 try { db.exec("UPDATE users SET username = name WHERE username IS NULL"); } catch(e) {}
 try { db.exec("UPDATE users SET display_name = name WHERE display_name IS NULL"); } catch(e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN org TEXT"); } catch(e) {}
 
 import bcrypt from 'bcryptjs';
 const adminExists = db.prepare('SELECT id FROM users WHERE is_admin = 1').get();
