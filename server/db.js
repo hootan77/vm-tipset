@@ -3,7 +3,8 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const db = new Database(join(__dirname, '..', 'vm-tipset.db'));
+const dataDir = process.env.RAILWAY_VOLUME_MOUNT_PATH || join(__dirname, '..');
+const db = new Database(join(dataDir, 'vm-tipset.db'));
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
