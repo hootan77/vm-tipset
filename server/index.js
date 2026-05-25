@@ -46,10 +46,13 @@ app.post('/api/users/:userId/role', (req, res) => {
 });
 
 app.post('/api/users/:userId/org', (req, res) => {
-  const { org } = req.body;
-  const validOrgs = ['Enskede', 'QBank', ''];
-  if (!validOrgs.includes(org)) return res.status(400).json({ error: 'Ogiltig organisation' });
-  db.prepare('UPDATE users SET org = ? WHERE id = ?').run(org || null, req.params.userId);
+  const { orgs } = req.body;
+  const validOrgs = ['Enskede', 'QBank'];
+  if (!Array.isArray(orgs) || !orgs.every(o => validOrgs.includes(o))) {
+    return res.status(400).json({ error: 'Ogiltig organisation' });
+  }
+  const value = orgs.length ? orgs.join(',') : null;
+  db.prepare('UPDATE users SET org = ? WHERE id = ?').run(value, req.params.userId);
   res.json({ ok: true });
 });
 

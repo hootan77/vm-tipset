@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { API } from '../context/AuthContext';
 
 const ROLES = ['Spelare', 'Ledare', 'Förälder', 'Syskon'];
-const ORGS = ['', 'Enskede', 'QBank'];
+const ORGS = ['Enskede', 'QBank'];
 
 export default function UserManager({ onViewUser }) {
   const [users, setUsers] = useState([]);
@@ -42,14 +42,18 @@ export default function UserManager({ onViewUser }) {
     }
   };
 
-  const changeOrg = async (userId, org) => {
+  const toggleOrg = async (userId, orgName, currentOrg) => {
+    const current = currentOrg ? currentOrg.split(',') : [];
+    const updated = current.includes(orgName)
+      ? current.filter(o => o !== orgName)
+      : [...current, orgName];
     const res = await fetch(`${API}/users/${userId}/org`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ org }),
+      body: JSON.stringify({ orgs: updated }),
     });
     if (res.ok) {
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, org: org || null } : u));
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, org: updated.length ? updated.join(',') : null } : u));
     }
   };
 
@@ -91,15 +95,19 @@ export default function UserManager({ onViewUser }) {
                   )}
                 </td>
                 <td className="py-3 px-4">
-                  <select
-                    value={u.org || ''}
-                    onChange={e => changeOrg(u.id, e.target.value)}
-                    className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none"
-                  >
+                  <div className="flex items-center gap-3">
                     {ORGS.map(o => (
-                      <option key={o} value={o}>{o || '—'}</option>
+                      <label key={o} className="flex items-center gap-1 text-xs cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={(u.org || '').split(',').includes(o)}
+                          onChange={() => toggleOrg(u.id, o, u.org)}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        {o}
+                      </label>
                     ))}
-                  </select>
+                  </div>
                 </td>
                 <td className="py-3 px-4 text-gray-500 text-xs">
                   {u.created_at ? new Date(u.created_at).toLocaleDateString('sv-SE') : ''}

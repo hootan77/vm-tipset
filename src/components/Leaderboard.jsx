@@ -23,8 +23,10 @@ export default function Leaderboard() {
       .then(d => { setData(d); setLoading(false); });
   }
 
-  const userOrg = user?.org;
-  const orgFiltered = userOrg ? data.filter(r => r.org === userOrg) : data;
+  const userOrgs = user?.org ? user.org.split(',') : [];
+  const orgFiltered = userOrgs.length
+    ? data.filter(r => r.org && r.org.split(',').some(o => userOrgs.includes(o)))
+    : data;
   const filtered = roleFilter === 'Alla' ? orgFiltered : orgFiltered.filter(r => r.role === roleFilter);
 
   if (loading) {
@@ -50,7 +52,7 @@ export default function Leaderboard() {
         </button>
       </div>
 
-      {userOrg !== 'QBank' && (
+      {!userOrgs.includes('QBank') && (
         <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2 flex-wrap">
           <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Filtrera:</span>
           {ROLES.map(r => (
