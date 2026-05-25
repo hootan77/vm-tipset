@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { API } from '../context/AuthContext';
 
+const ROLES = ['Spelare', 'Ledare', 'Förälder', 'Syskon'];
+
 export default function UserManager({ onViewUser }) {
   const [users, setUsers] = useState([]);
   const [passwords, setPasswords] = useState({});
@@ -28,11 +30,22 @@ export default function UserManager({ onViewUser }) {
     }
   };
 
+  const changeRole = async (userId, role) => {
+    const res = await fetch(`${API}/users/${userId}/role`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role }),
+    });
+    if (res.ok) {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
       <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-6 py-4">
         <h3 className="text-white font-bold text-xl">Användare</h3>
-        <p className="text-indigo-200 text-sm">Hantera tippare, ändra lösenord och se deras tips</p>
+        <p className="text-indigo-200 text-sm">Hantera tippare, ändra roll/lösenord och se deras tips</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -53,7 +66,15 @@ export default function UserManager({ onViewUser }) {
                   {u.isAdmin ? (
                     <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">Admin</span>
                   ) : (
-                    <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">{u.role || 'Spelare'}</span>
+                    <select
+                      value={u.role || 'Spelare'}
+                      onChange={e => changeRole(u.id, e.target.value)}
+                      className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none"
+                    >
+                      {ROLES.map(r => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
                   )}
                 </td>
                 <td className="py-3 px-4 text-gray-500 text-xs">

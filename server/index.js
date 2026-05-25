@@ -14,29 +14,35 @@ app.use(express.json());
 // ── Auth ──
 
 app.post('/api/register', (req, res) => {
-  const { name, password, role } = req.body;
-  if (!name || !password) return res.status(400).json({ error: 'Namn och lösenord krävs' });
-  if (name.length < 2) return res.status(400).json({ error: 'Namn måste vara minst 2 tecken' });
+  const { displayName, username, password } = req.body;
+  if (!displayName || !username || !password) return res.status(400).json({ error: 'Alla fält krävs' });
+  if (displayName.length < 2) return res.status(400).json({ error: 'Namn måste vara minst 2 tecken' });
+  if (username.length < 2) return res.status(400).json({ error: 'Användarnamn måste vara minst 2 tecken' });
   if (password.length < 4) return res.status(400).json({ error: 'Lösenord måste vara minst 4 tecken' });
 
-  const validRoles = ['Spelare', 'Ledare', 'Förälder', 'Syskon'];
-  const userRole = validRoles.includes(role) ? role : 'Spelare';
-
-  const existing = db.prepare('SELECT id FROM users WHERE name = ?').get(name);
-  if (existing) return res.status(409).json({ error: 'Namnet är redan taget' });
+  const existing = db.prepare('SELECT id FROM users WHERE username = ? OR name = ?').get(username, username);
+  if (existing) return res.status(409).json({ error: 'Användarnamnet är redan taget' });
 
   const hash = bcrypt.hashSync(password, 10);
-  const result = db.prepare('INSERT INTO users (name, password_hash, role) VALUES (?, ?, ?)').run(name, hash, userRole);
-  res.json({ id: result.lastInsertRowid, name, isAdmin: false, role: userRole });
+  const result = db.prepare('INSERT INTO users (name, display_name, username, password_hash, role) VALUES (?, ?, ?, ?, ?)').run(displayName, displayName, username, hash, 'Spelare');
+  res.json({ id: result.lastInsertRowid, name: displayName, isAdmin: false, role: 'Spelare' });
 });
 
 app.post('/api/login', (req, res) => {
   const { name, password } = req.body;
-  const user = db.prepare('SELECT * FROM users WHERE name = ?').get(name);
+  const user = db.prepare('SELECT * FROM users WHERE username = ? OR name = ?').get(name, name);
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-    return res.status(401).json({ error: 'Fel namn eller lösenord' });
+    return res.status(401).json({ error: 'Fel användarnamn eller lösenord' });
   }
-  res.json({ id: user.id, name: user.name, isAdmin: !!user.is_admin, role: user.role || 'Spelare' });
+  res.json({ id: user.id, name: user.display_name || user.name, isAdmin: !!user.is_admin, role: user.role || 'Spelare' });
+});
+
+app.post('/api/users/:userId/role', (req, res) => {
+  const { role } = req.body;
+  const validRoles = ['Spelare', 'Ledare', 'Förälder', 'Syskon'];
+  if (!validRoles.includes(role)) return res.status(400).json({ error: 'Ogiltig roll' });
+  db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, req.params.userId);
+  res.json({ ok: true });
 });
 
 // ── Group predictions ──
@@ -160,7 +166,7 @@ function getTeamsInRound(bracket, round) {
 }
 
 app.get('/api/leaderboard', (_req, res) => {
-  const users = db.prepare("SELECT id, name, role FROM users WHERE is_admin = 0").all();
+  const users = db.prepare("SELECT id, name, display_name, role FROM users WHERE is_admin = 0").all();
   const adminGroupRows = db.prepare('SELECT group_name, match_index, home_goals, away_goals FROM admin_group_results').all();
   const adminKnockoutRows = db.prepare('SELECT match_id, home_goals, away_goals, penalty_winner FROM admin_knockout_results').all();
 
@@ -238,7 +244,7 @@ app.get('/api/leaderboard', (_req, res) => {
 
     leaderboard.push({
       id: user.id,
-      name: user.name,
+      name: user.display_name || user.name,
       role: user.role || 'Spelare',
       groupPoints,
       knockoutPoints,
@@ -302,8 +308,8 @@ app.post('/api/admin/lock', (req, res) => {
 // ── Users list (for admin) ──
 
 app.get('/api/users', (_req, res) => {
-  const users = db.prepare('SELECT id, name, is_admin, role, created_at FROM users').all();
-  res.json(users.map(u => ({ ...u, isAdmin: !!u.is_admin, role: u.role || 'Spelare' })));
+  const users = db.prepare('SELECT id, name, display_name, username, is_admin, role, created_at FROM users').all();
+  res.json(users.map(u => ({ ...u, name: u.display_name || u.name, isAdmin: !!u.is_admin, role: u.role || 'Spelare' })));
 });
 
 app.post('/api/users/:id/make-admin', (req, res) => {

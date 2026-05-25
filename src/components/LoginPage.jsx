@@ -1,26 +1,31 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-const ROLES = ['Spelare', 'Ledare', 'Förälder', 'Syskon'];
-
 export default function LoginPage() {
   const { login, register, error, setError } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('Spelare');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (isRegister && password !== confirmPassword) {
+      setError('Lösenorden matchar inte');
+      return;
+    }
     setLoading(true);
     if (isRegister) {
-      await register(name, password, role);
+      await register(displayName, username, password);
     } else {
-      await login(name, password);
+      await login(username, password);
     }
     setLoading(false);
   }
+
+  const clearError = () => setError(null);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center px-4">
@@ -33,14 +38,27 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {isRegister && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Namn</label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={e => { setDisplayName(e.target.value); clearError(); }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                placeholder="Ditt riktiga namn"
+                required
+              />
+            </div>
+          )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Namn</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Användarnamn</label>
             <input
               type="text"
-              value={name}
-              onChange={e => { setName(e.target.value); setError(null); }}
+              value={username}
+              onChange={e => { setUsername(e.target.value); clearError(); }}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              placeholder="Ditt namn"
+              placeholder="Ditt användarnamn"
               required
             />
           </div>
@@ -49,32 +67,23 @@ export default function LoginPage() {
             <input
               type="password"
               value={password}
-              onChange={e => { setPassword(e.target.value); setError(null); }}
+              onChange={e => { setPassword(e.target.value); clearError(); }}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               placeholder="Ditt lösenord"
               required
             />
           </div>
-
           {isRegister && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Roll</label>
-              <div className="grid grid-cols-2 gap-2">
-                {ROLES.map(r => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRole(r)}
-                    className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
-                      role === r
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bekräfta lösenord</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={e => { setConfirmPassword(e.target.value); clearError(); }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                placeholder="Upprepa lösenord"
+                required
+              />
             </div>
           )}
 
