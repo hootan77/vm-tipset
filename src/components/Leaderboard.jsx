@@ -85,6 +85,7 @@ export default function Leaderboard() {
                 <th className="text-left py-3 px-4">Roll</th>
                 <th className="text-center py-3 px-4">Gruppspel</th>
                 <th className="text-center py-3 px-4">Slutspel</th>
+                <th className="text-center py-3 px-4">Bonus</th>
                 <th className="text-center py-3 px-4 font-bold">Totalt</th>
                 <th className="text-center py-3 px-4">Exakta</th>
                 <th className="text-center py-3 px-4">Rätt utfall</th>
@@ -101,6 +102,7 @@ export default function Leaderboard() {
                   <td className="py-3 px-4 text-gray-500 text-xs">{row.role || 'Spelare'}</td>
                   <td className="py-3 px-4 text-center">{row.groupPoints}</td>
                   <td className="py-3 px-4 text-center">{row.knockoutPoints}</td>
+                  <td className="py-3 px-4 text-center">{row.bonusPoints || 0}</td>
                   <td className="py-3 px-4 text-center font-bold text-emerald-600 text-lg">{row.total}</td>
                   <td className="py-3 px-4 text-center text-gray-600">{row.exactResults}</td>
                   <td className="py-3 px-4 text-center text-gray-600">{row.correctOutcomes}</td>

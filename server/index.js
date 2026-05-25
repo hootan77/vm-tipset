@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db from './db.js';
-import { computeBracketFromData } from './bracket.js';
+import { computeBracketFromData, getMatchWinner } from './bracket.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -188,6 +188,7 @@ app.get('/api/leaderboard', (_req, res) => {
   }
 
   const adminBracket = computeBracketFromData(adminGroupRows, adminKnockoutRows);
+  const adminTopScorer = db.prepare('SELECT player_name FROM admin_top_scorer WHERE id = 1').get();
 
   const leaderboard = [];
 
@@ -241,13 +242,30 @@ app.get('/api/leaderboard', (_req, res) => {
     }
 
     const userBracket = computeBracketFromData(userGroupRows, userKnockoutRows);
-    const roundsToScore = ['r16', 'qf', 'sf', 'final'];
-    for (const round of roundsToScore) {
+    const roundPoints = { r16: 5, qf: 5, sf: 10, final: 20 };
+    for (const [round, pts] of Object.entries(roundPoints)) {
       const userTeams = getTeamsInRound(userBracket, round);
       const adminTeams = getTeamsInRound(adminBracket, round);
       if (adminTeams.size === 0) continue;
       for (const team of userTeams) {
-        if (adminTeams.has(team)) knockoutPoints += 5;
+        if (adminTeams.has(team)) knockoutPoints += pts;
+      }
+    }
+
+    let bonusPoints = 0;
+
+    if (adminBracket.final?.[0]) {
+      const adminWinner = getMatchWinner(adminBracket.final[0]);
+      if (adminWinner && userBracket.final?.[0]) {
+        const userWinner = getMatchWinner(userBracket.final[0]);
+        if (userWinner === adminWinner) bonusPoints += 40;
+      }
+    }
+
+    const userTopScorer = db.prepare('SELECT player_name FROM top_scorer_predictions WHERE user_id = ?').get(user.id);
+    if (adminTopScorer && adminTopScorer.player_name && userTopScorer?.player_name) {
+      if (userTopScorer.player_name.trim().toLowerCase() === adminTopScorer.player_name.trim().toLowerCase()) {
+        bonusPoints += 50;
       }
     }
 
@@ -260,7 +278,8 @@ app.get('/api/leaderboard', (_req, res) => {
       org: user.org || null,
       groupPoints,
       knockoutPoints,
-      total: groupPoints + knockoutPoints,
+      bonusPoints,
+      total: groupPoints + knockoutPoints + bonusPoints,
       exactResults,
       correctOutcomes,
       totalPredictions,

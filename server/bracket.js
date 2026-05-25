@@ -89,7 +89,7 @@ export function buildRoundOf32(allGroupStandings, bestThirds) {
   }));
 }
 
-function getMatchWinner(match) {
+export function getMatchWinner(match) {
   if (match.homeGoals == null || match.awayGoals == null) return null;
   const h = parseInt(match.homeGoals, 10);
   const a = parseInt(match.awayGoals, 10);
