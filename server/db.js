@@ -78,4 +78,11 @@ try { db.exec('ALTER TABLE knockout_predictions ADD COLUMN penalty_winner TEXT')
 try { db.exec('ALTER TABLE admin_knockout_results ADD COLUMN penalty_winner TEXT'); } catch(e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'Spelare'"); } catch(e) {}
 
+import bcrypt from 'bcryptjs';
+const adminExists = db.prepare('SELECT id FROM users WHERE is_admin = 1').get();
+if (!adminExists) {
+  const hash = bcrypt.hashSync('admin123', 10);
+  db.prepare("INSERT INTO users (name, password_hash, is_admin, role) VALUES ('Admin', ?, 1, 'Ledare')").run(hash);
+}
+
 export default db;
