@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { API } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { TEAMS, GROUP_NAMES, getGroupMatchesForGroup } from '../data/teams';
-import { getFlag } from '../data/flags';
+import { getFlag, getTeamName } from '../data/flags';
 import { calculateStandings, sortStandings } from '../logic/standings';
 
 export default function ViewUserPredictions({ viewUser, onBack }) {
+  const { t } = useLanguage();
   const [data, setData] = useState(null);
 
   useEffect(() => {
@@ -13,7 +15,7 @@ export default function ViewUserPredictions({ viewUser, onBack }) {
       .then(setData);
   }, [viewUser.id]);
 
-  if (!data) return <p className="text-gray-500 p-8">Laddar...</p>;
+  if (!data) return <p className="text-gray-500 p-8">{t('vp.loading')}</p>;
 
   const groupMatches = {};
   for (const group of GROUP_NAMES) {
@@ -30,16 +32,16 @@ export default function ViewUserPredictions({ viewUser, onBack }) {
           onClick={onBack}
           className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors"
         >
-          Tillbaka
+          {t('vp.back')}
         </button>
         <h2 className="text-2xl font-bold text-gray-800">
-          Tips av {viewUser.name}
+          {t('vp.tipsBy')} {viewUser.name}
         </h2>
       </div>
 
       {data.topScorer && (
         <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-          <span className="text-sm font-semibold text-purple-700">Skyttekung: </span>
+          <span className="text-sm font-semibold text-purple-700">{t('vp.topScorer')} </span>
           <span className="text-purple-900">{data.topScorer}</span>
         </div>
       )}
@@ -63,26 +65,27 @@ export default function ViewUserPredictions({ viewUser, onBack }) {
 }
 
 function ReadOnlyGroupCard({ group, matches, standings }) {
+  const { t, lang } = useLanguage();
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
       <div className="px-4 py-3 bg-gradient-to-r from-gray-500 to-gray-700">
-        <h3 className="text-white font-bold text-lg">Grupp {group}</h3>
+        <h3 className="text-white font-bold text-lg">{t('group.title')} {group}</h3>
       </div>
       <div className="p-4 space-y-3">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-gray-500 border-b">
-              <th className="text-left py-1 px-1">#</th>
-              <th className="text-left py-1 px-1">Lag</th>
-              <th className="py-1 px-1 font-bold">P</th>
-              <th className="py-1 px-1">MS</th>
+              <th className="text-left py-1 px-1">{t('vp.col.rank')}</th>
+              <th className="text-left py-1 px-1">{t('vp.col.team')}</th>
+              <th className="py-1 px-1 font-bold">{t('vp.col.points')}</th>
+              <th className="py-1 px-1">{t('vp.col.gd')}</th>
             </tr>
           </thead>
           <tbody>
             {standings.map((row, i) => (
               <tr key={row.team} className={`border-b last:border-0 ${i < 2 ? 'bg-green-50' : ''}`}>
                 <td className="py-1 px-1 text-gray-500">{i + 1}</td>
-                <td className="py-1 px-1 font-medium text-gray-800 whitespace-nowrap">{getFlag(row.team)} {row.team}</td>
+                <td className="py-1 px-1 font-medium text-gray-800 whitespace-nowrap">{getFlag(row.team)} {getTeamName(row.team, lang)}</td>
                 <td className="py-1 px-1 text-center font-bold">{row.points}</td>
                 <td className="py-1 px-1 text-center">{row.gd > 0 ? `+${row.gd}` : row.gd}</td>
               </tr>
@@ -93,11 +96,11 @@ function ReadOnlyGroupCard({ group, matches, standings }) {
         <div className="space-y-1">
           {matches.map((m, i) => (
             <div key={i} className="flex items-center gap-2 text-xs py-1 px-2 bg-gray-50 rounded">
-              <span className="flex-1 text-right truncate">{getFlag(m.home)} {m.home}</span>
+              <span className="flex-1 text-right truncate">{getFlag(m.home)} {getTeamName(m.home, lang)}</span>
               <span className={`font-bold px-1 min-w-[2rem] text-center ${m.homeGoals != null ? 'text-gray-800' : 'text-gray-300'}`}>
                 {m.homeGoals ?? '-'} – {m.awayGoals ?? '-'}
               </span>
-              <span className="flex-1 text-left truncate">{getFlag(m.away)} {m.away}</span>
+              <span className="flex-1 text-left truncate">{getFlag(m.away)} {getTeamName(m.away, lang)}</span>
             </div>
           ))}
         </div>
@@ -107,11 +110,12 @@ function ReadOnlyGroupCard({ group, matches, standings }) {
 }
 
 function KnockoutSummary({ knockoutData }) {
+  const { t } = useLanguage();
   const entries = Object.entries(knockoutData || {});
   if (entries.length === 0) {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center text-gray-500 text-sm">
-        Inga slutspelstips registrerade.
+        {t('vp.noKnockout')}
       </div>
     );
   }
@@ -125,14 +129,14 @@ function KnockoutSummary({ knockoutData }) {
   }
 
   const roundLabels = {
-    r32: '32-delsfinal', r16: 'Åttondelsfinal', qf: 'Kvartsfinal',
-    sf: 'Semifinal', bronze: 'Bronsmatch', final: 'Final',
+    r32: t('ko.r32'), r16: t('ko.r16'), qf: t('ko.qf'),
+    sf: t('ko.sf'), bronze: t('ko.bronze'), final: t('ko.final'),
   };
 
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
       <div className="px-4 py-3 bg-gradient-to-r from-gray-500 to-gray-700">
-        <h3 className="text-white font-bold text-lg">Slutspelstips</h3>
+        <h3 className="text-white font-bold text-lg">{t('vp.knockoutTitle')}</h3>
       </div>
       <div className="p-4 space-y-3">
         {Object.entries(rounds).map(([round, matches]) => {

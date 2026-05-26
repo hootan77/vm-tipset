@@ -1,7 +1,31 @@
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+
+function LanguageSwitcher() {
+  const { lang, setLang } = useLanguage();
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => setLang('sv')}
+        className={`text-xl leading-none rounded transition-transform ${lang === 'sv' ? 'scale-125 drop-shadow-lg' : 'opacity-60 hover:opacity-100'}`}
+        title="Svenska"
+      >
+        🇸🇪
+      </button>
+      <button
+        onClick={() => setLang('en')}
+        className={`text-xl leading-none rounded transition-transform ${lang === 'en' ? 'scale-125 drop-shadow-lg' : 'opacity-60 hover:opacity-100'}`}
+        title="English"
+      >
+        🇬🇧
+      </button>
+    </div>
+  );
+}
 
 export default function Header({ view, setView }) {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
 
   return (
     <header className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white">
@@ -10,39 +34,41 @@ export default function Header({ view, setView }) {
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">VM Tips 2026</h1>
             <p className="text-blue-200 mt-1 text-sm sm:text-base">
-              Inloggad som <span className="font-semibold text-white">{user?.name}</span>
+              {t('header.loggedInAs')} <span className="font-semibold text-white">{user?.name}</span>
               {user?.isAdmin && <span className="ml-2 bg-amber-500 text-xs px-2 py-0.5 rounded-full">Admin</span>}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex gap-2 flex-wrap">
               <NavButton active={view === 'predict'} onClick={() => setView('predict')}>
-                Tippa
+                {t('nav.predict')}
               </NavButton>
               <NavButton active={view === 'leaderboard'} onClick={() => setView('leaderboard')}>
-                Ställning
+                {t('nav.leaderboard')}
               </NavButton>
               <NavButton active={view === 'venues'} onClick={() => setView('venues')}>
-                VM Arenor
+                {t('nav.venues')}
               </NavButton>
               <NavButton active={view === 'funfacts'} onClick={() => setView('funfacts')}>
-                Fun Facts
+                {t('nav.funfacts')}
               </NavButton>
               <NavButton active={view === 'balls'} onClick={() => setView('balls')}>
-                VM Bollar
+                {t('nav.balls')}
               </NavButton>
               {user?.isAdmin && (
                 <NavButton active={view === 'admin'} onClick={() => setView('admin')}>
-                  Admin
+                  {t('nav.admin')}
                 </NavButton>
               )}
             </div>
             <div className="w-px h-6 bg-white/20 hidden sm:block mx-2" />
+            <LanguageSwitcher />
+            <div className="w-px h-6 bg-white/20 hidden sm:block mx-1" />
             <button
               onClick={logout}
               className="px-4 py-2 rounded-lg text-sm font-medium bg-white/10 text-white hover:bg-red-500/80 transition-colors"
             >
-              Logga ut
+              {t('nav.logout')}
             </button>
           </div>
         </div>

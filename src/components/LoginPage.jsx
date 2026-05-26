@@ -1,8 +1,32 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+
+function LoginLanguageSwitcher() {
+  const { lang, setLang } = useLanguage();
+  return (
+    <div className="flex items-center gap-2 justify-center mb-6">
+      <button
+        onClick={() => setLang('sv')}
+        className={`text-2xl transition-transform ${lang === 'sv' ? 'scale-125' : 'opacity-50 hover:opacity-100'}`}
+        title="Svenska"
+      >
+        🇸🇪
+      </button>
+      <button
+        onClick={() => setLang('en')}
+        className={`text-2xl transition-transform ${lang === 'en' ? 'scale-125' : 'opacity-50 hover:opacity-100'}`}
+        title="English"
+      >
+        🇬🇧
+      </button>
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const { login, register, error, setError } = useAuth();
+  const { t } = useLanguage();
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -13,7 +37,7 @@ export default function LoginPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (isRegister && password !== confirmPassword) {
-      setError('Lösenorden matchar inte');
+      setError(t('login.passwordMismatch'));
       return;
     }
     setLoading(true);
@@ -30,58 +54,59 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <LoginLanguageSwitcher />
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">VM Tips 2026</h1>
           <p className="text-gray-500 mt-2">
-            {isRegister ? 'Skapa ett konto för att börja tippa' : 'Logga in för att tippa'}
+            {isRegister ? t('login.subtitle.register') : t('login.subtitle.login')}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {isRegister && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Namn</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('login.name')}</label>
               <input
                 type="text"
                 value={displayName}
                 onChange={e => { setDisplayName(e.target.value); clearError(); }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="Ditt riktiga namn"
+                placeholder={t('login.namePlaceholder')}
                 required
               />
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Användarnamn</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('login.username')}</label>
             <input
               type="text"
               value={username}
               onChange={e => { setUsername(e.target.value); clearError(); }}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              placeholder="Ditt användarnamn"
+              placeholder={t('login.usernamePlaceholder')}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Lösenord</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('login.password')}</label>
             <input
               type="password"
               value={password}
               onChange={e => { setPassword(e.target.value); clearError(); }}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              placeholder="Ditt lösenord"
+              placeholder={t('login.passwordPlaceholder')}
               required
             />
           </div>
           {isRegister && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Bekräfta lösenord</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('login.confirmPassword')}</label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={e => { setConfirmPassword(e.target.value); clearError(); }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="Upprepa lösenord"
+                placeholder={t('login.confirmPlaceholder')}
                 required
               />
             </div>
@@ -96,7 +121,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
-            {loading ? '...' : isRegister ? 'Skapa konto' : 'Logga in'}
+            {loading ? '...' : isRegister ? t('login.createAccount') : t('login.login')}
           </button>
         </form>
 
@@ -105,7 +130,7 @@ export default function LoginPage() {
             onClick={() => { setIsRegister(!isRegister); setError(null); }}
             className="text-blue-600 text-sm hover:underline"
           >
-            {isRegister ? 'Har redan ett konto? Logga in' : 'Inget konto? Registrera dig'}
+            {isRegister ? t('login.hasAccount') : t('login.noAccount')}
           </button>
         </div>
       </div>

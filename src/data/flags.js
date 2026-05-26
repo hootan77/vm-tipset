@@ -49,12 +49,53 @@ const FLAGS = {
   'Panama': '\u{1F1F5}\u{1F1E6}',
 };
 
+const TEAM_NAMES_EN = {
+  'Mexiko': 'Mexico',
+  'Sydafrika': 'South Africa',
+  'Sydkorea': 'South Korea',
+  'Tjeckien': 'Czechia',
+  'Kanada': 'Canada',
+  'Schweiz': 'Switzerland',
+  'Bosnien-Hercegovina': 'Bosnia & Herzegovina',
+  'Brasilien': 'Brazil',
+  'Marocko': 'Morocco',
+  'Skottland': 'Scotland',
+  'Australien': 'Australia',
+  'Turkiet': 'Turkey',
+  'Tyskland': 'Germany',
+  'Elfenbenskusten': 'Ivory Coast',
+  'Nederländerna': 'Netherlands',
+  'Sverige': 'Sweden',
+  'Tunisien': 'Tunisia',
+  'Belgien': 'Belgium',
+  'Egypten': 'Egypt',
+  'Nya Zeeland': 'New Zealand',
+  'Spanien': 'Spain',
+  'Kap Verde': 'Cape Verde',
+  'Saudiarabien': 'Saudi Arabia',
+  'Frankrike': 'France',
+  'Norge': 'Norway',
+  'Irak': 'Iraq',
+  'Algeriet': 'Algeria',
+  'Österrike': 'Austria',
+  'Jordanien': 'Jordan',
+  'DR Kongo': 'DR Congo',
+  'Kroatien': 'Croatia',
+};
+
 export function getFlag(team) {
   return FLAGS[team] || '';
 }
 
-export function teamWithFlag(team) {
+export function getTeamName(team, lang) {
+  if (!team) return '';
+  if (lang === 'en') return TEAM_NAMES_EN[team] || team;
+  return team;
+}
+
+export function teamWithFlag(team, lang) {
   if (!team) return 'TBD';
   const flag = FLAGS[team];
-  return flag ? `${flag} ${team}` : team;
+  const name = getTeamName(team, lang);
+  return flag ? `${flag} ${name}` : name;
 }

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTournament } from '../context/TournamentContext';
+import { useLanguage } from '../context/LanguageContext';
 import { calculateTotalScore } from '../logic/scoring';
 import { TEAMS, GROUP_NAMES, getGroupMatches } from '../data/teams';
 import { calculateStandings, sortStandings, getBestThirdPlaced } from '../logic/standings';
@@ -48,13 +49,13 @@ export default function ScoreBoard() {
     );
   }, [state, hasAdminData]);
 
+  const { t } = useLanguage();
+
   if (!hasAdminData) {
     return (
       <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 text-center">
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">Poängberäkning</h3>
-        <p className="text-gray-500 text-sm">
-          Poäng visas när admin har fyllt i verkliga resultat. Byt till adminläge för att börja.
-        </p>
+        <h3 className="text-lg font-semibold text-gray-700 mb-2">{t('sb.title')}</h3>
+        <p className="text-gray-500 text-sm">{t('sb.noData')}</p>
       </div>
     );
   }
@@ -62,22 +63,22 @@ export default function ScoreBoard() {
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
       <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4">
-        <h3 className="text-white font-bold text-xl">Din poäng</h3>
+        <h3 className="text-white font-bold text-xl">{t('sb.yourScore')}</h3>
       </div>
       <div className="p-6">
         <div className="text-center mb-6">
           <div className="text-5xl font-bold text-emerald-600">{score?.total ?? 0}</div>
-          <div className="text-gray-500 text-sm mt-1">Totalt poäng</div>
+          <div className="text-gray-500 text-sm mt-1">{t('sb.total')}</div>
         </div>
         {score?.breakdown && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-            <ScoreItem label="Gruppspel" value={score.breakdown.groups} />
-            <ScoreItem label="32-del" value={score.breakdown.r32} />
-            <ScoreItem label="Åttondel" value={score.breakdown.r16} />
-            <ScoreItem label="Kvart" value={score.breakdown.qf} />
-            <ScoreItem label="Semi" value={score.breakdown.sf} />
-            <ScoreItem label="Final" value={score.breakdown.final} />
-            <ScoreItem label="Vinnare" value={score.breakdown.winner} />
+            <ScoreItem label={t('sb.groups')} value={score.breakdown.groups} />
+            <ScoreItem label={t('sb.r32')} value={score.breakdown.r32} />
+            <ScoreItem label={t('sb.r16')} value={score.breakdown.r16} />
+            <ScoreItem label={t('sb.qf')} value={score.breakdown.qf} />
+            <ScoreItem label={t('sb.sf')} value={score.breakdown.sf} />
+            <ScoreItem label={t('sb.final')} value={score.breakdown.final} />
+            <ScoreItem label={t('sb.winner')} value={score.breakdown.winner} />
           </div>
         )}
       </div>

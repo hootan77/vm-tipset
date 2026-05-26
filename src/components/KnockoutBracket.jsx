@@ -1,7 +1,8 @@
 import { useTournament } from '../context/TournamentContext';
-import { ROUND_LABELS, getMatchWinner } from '../logic/knockout';
+import { useLanguage } from '../context/LanguageContext';
+import { getMatchWinner } from '../logic/knockout';
 import { scoreKnockoutMatch } from '../logic/scoring';
-import { getFlag } from '../data/flags';
+import { getFlag, getTeamName } from '../data/flags';
 import KnockoutMatch from './KnockoutMatch';
 
 const ROUND_ORDER = ['r32', 'r16', 'qf', 'sf', 'final'];
@@ -29,6 +30,7 @@ function getRoundPoints(userBracket, adminBracket, round) {
 }
 
 export default function KnockoutBracket({ isAdmin }) {
+  const { t } = useLanguage();
   const { computed } = useTournament();
   const bracket = isAdmin ? computed.adminBracket : computed.userBracket;
   const adminBracket = computed.adminBracket;
@@ -38,9 +40,9 @@ export default function KnockoutBracket({ isAdmin }) {
     return (
       <div className="bg-white rounded-xl shadow-md border border-gray-200 p-8 text-center">
         <div className="text-4xl mb-4">⚽</div>
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">Slutspelsträd</h3>
+        <h3 className="text-lg font-semibold text-gray-700 mb-2">{t('ko.title')}</h3>
         <p className="text-gray-500">
-          Fyll i alla gruppspelsmatcher för att automatiskt generera slutspelsträdet.
+          {t('ko.fillGroups')}
         </p>
       </div>
     );
@@ -51,9 +53,9 @@ export default function KnockoutBracket({ isAdmin }) {
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
       <div className="px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-600">
-        <h3 className="text-white font-bold text-xl">Slutspelsträd</h3>
+        <h3 className="text-white font-bold text-xl">{t('ko.title')}</h3>
         <p className="text-amber-100 text-sm">
-          {isAdmin ? 'Fyll i verkliga resultat' : 'Tippa resultat — vinnaren går automatiskt vidare'}
+          {isAdmin ? t('ko.adminSubtitle') : t('ko.userSubtitle')}
         </p>
       </div>
 
@@ -76,7 +78,7 @@ export default function KnockoutBracket({ isAdmin }) {
       {bracket.bronze && (
         <div className="border-t px-6 py-4">
           <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-            {ROUND_LABELS.bronze}
+            {t('ko.bronze')}
           </h4>
           <div className="max-w-xs">
             <KnockoutMatch
@@ -92,6 +94,7 @@ export default function KnockoutBracket({ isAdmin }) {
 }
 
 function RoundColumn({ round, matches, isAdmin, roundPoints, adminMatches }) {
+  const { t } = useLanguage();
   const spacingClass = {
     r32: 'gap-2',
     r16: 'gap-6',
@@ -104,7 +107,7 @@ function RoundColumn({ round, matches, isAdmin, roundPoints, adminMatches }) {
     <div className="flex-shrink-0 w-52">
       <div className="flex items-center justify-center gap-2 mb-3">
         <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-          {ROUND_LABELS[round]}
+          {t(`ko.${round}`)}
         </h4>
         {roundPoints && (
           <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
@@ -129,6 +132,7 @@ function RoundColumn({ round, matches, isAdmin, roundPoints, adminMatches }) {
 }
 
 function WinnerColumn({ bracket, adminBracket, showPoints }) {
+  const { t, lang } = useLanguage();
   const finalMatch = bracket.final?.[0];
   const winner = finalMatch ? getMatchWinner(finalMatch) : null;
 
@@ -144,7 +148,7 @@ function WinnerColumn({ bracket, adminBracket, showPoints }) {
   return (
     <div className="flex-shrink-0 w-44 flex flex-col items-center justify-center">
       <div className="flex items-center gap-2 mb-3">
-        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">VM-Vinnare</h4>
+        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t('ko.winner')}</h4>
         {winnerPoints !== null && (
           <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
             winnerPoints > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-500'
@@ -161,10 +165,10 @@ function WinnerColumn({ bracket, adminBracket, showPoints }) {
         {winner ? (
           <>
             <div className="text-3xl mb-2">🏆</div>
-            <div className="font-bold text-lg text-gray-800">{getFlag(winner)} {winner}</div>
+            <div className="font-bold text-lg text-gray-800">{getFlag(winner)} {getTeamName(winner, lang)}</div>
           </>
         ) : (
-          <div className="text-gray-400 text-sm">Tippa slutspelet</div>
+          <div className="text-gray-400 text-sm">{t('ko.predict')}</div>
         )}
       </div>
     </div>

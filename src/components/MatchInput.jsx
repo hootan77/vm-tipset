@@ -1,15 +1,17 @@
 import { useTournament } from '../context/TournamentContext';
-import { getFlag } from '../data/flags';
+import { useLanguage } from '../context/LanguageContext';
+import { getFlag, getTeamName } from '../data/flags';
 import { scoreGroupMatch } from '../logic/scoring';
 
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' });
-}
-
 export default function MatchInput({ group, matchIndex, match, isAdmin }) {
+  const { lang } = useLanguage();
   const { saveGroupScore, locked, state } = useTournament();
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { day: 'numeric', month: 'short' });
+  };
 
   const readOnly = !isAdmin && locked;
 
@@ -49,7 +51,7 @@ export default function MatchInput({ group, matchIndex, match, isAdmin }) {
       )}
       <div className="flex items-center gap-2 text-sm">
         <span className="flex-1 text-right font-medium text-gray-700 truncate">
-          {getFlag(match.home)} {match.home}
+          {getFlag(match.home)} {getTeamName(match.home, lang)}
         </span>
         <input
           type="number"
@@ -71,7 +73,7 @@ export default function MatchInput({ group, matchIndex, match, isAdmin }) {
           onChange={e => handleChange('awayGoals', e.target.value)}
         />
         <span className="flex-1 text-left font-medium text-gray-700 truncate">
-          {getFlag(match.away)} {match.away}
+          {getFlag(match.away)} {getTeamName(match.away, lang)}
         </span>
       </div>
     </div>

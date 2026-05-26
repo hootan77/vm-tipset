@@ -1,13 +1,15 @@
 import { useTournament } from '../context/TournamentContext';
-import { getFlag } from '../data/flags';
-
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' });
-}
+import { useLanguage } from '../context/LanguageContext';
+import { getFlag, getTeamName } from '../data/flags';
 
 export default function KnockoutMatch({ match, isAdmin, points }) {
+  const { t, lang } = useLanguage();
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { day: 'numeric', month: 'short' });
+  };
   const { saveKnockoutScore, locked } = useTournament();
   const readOnly = !isAdmin && locked;
 
@@ -55,6 +57,7 @@ export default function KnockoutMatch({ match, isAdmin, points }) {
         onChange={v => handleChange('homeGoals', v)}
         enabled={hasTeams}
         readOnly={readOnly}
+        lang={lang}
       />
       <div className="border-t border-gray-200" />
       <TeamRow
@@ -64,10 +67,11 @@ export default function KnockoutMatch({ match, isAdmin, points }) {
         onChange={v => handleChange('awayGoals', v)}
         enabled={hasTeams}
         readOnly={readOnly}
+        lang={lang}
       />
       {needsPenaltyWinner && (
         <div className="border-t border-gray-100 px-2 py-1.5 bg-amber-50">
-          <div className="text-[10px] text-amber-700 font-medium mb-1">Vinner på straffar:</div>
+          <div className="text-[10px] text-amber-700 font-medium mb-1">{t('ko.penaltyWinner')}</div>
           <div className="flex gap-1">
             <button
               disabled={readOnly}
@@ -78,7 +82,7 @@ export default function KnockoutMatch({ match, isAdmin, points }) {
                   : 'border-gray-300 hover:bg-gray-100 text-gray-600'
               } ${readOnly ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
-              {getFlag(match.home)} {match.home}
+              {getFlag(match.home)} {getTeamName(match.home, lang)}
             </button>
             <button
               disabled={readOnly}
@@ -89,7 +93,7 @@ export default function KnockoutMatch({ match, isAdmin, points }) {
                   : 'border-gray-300 hover:bg-gray-100 text-gray-600'
               } ${readOnly ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
-              {getFlag(match.away)} {match.away}
+              {getFlag(match.away)} {getTeamName(match.away, lang)}
             </button>
           </div>
         </div>
@@ -98,11 +102,11 @@ export default function KnockoutMatch({ match, isAdmin, points }) {
   );
 }
 
-function TeamRow({ team, goals, isWinner, onChange, enabled, readOnly }) {
+function TeamRow({ team, goals, isWinner, onChange, enabled, readOnly, lang }) {
   return (
     <div className={`flex items-center gap-1 px-2 py-1.5 ${isWinner ? 'bg-green-50 font-semibold' : ''}`}>
       <span className={`flex-1 truncate ${team ? 'text-gray-800' : 'text-gray-400 italic'}`}>
-        {team ? `${getFlag(team)} ${team}` : 'TBD'}
+        {team ? `${getFlag(team)} ${getTeamName(team, lang)}` : 'TBD'}
       </span>
       {enabled && (
         <input

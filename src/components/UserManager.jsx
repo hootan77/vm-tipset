@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { API } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const ROLES = ['Spelare', 'Ledare', 'Förälder', 'Syskon'];
-const ORGS = ['Enskede', 'QBank'];
+const ORGS = ['Enskede', 'QBank', 'Friends'];
 
 export default function UserManager({ onViewUser }) {
+  const { t } = useLanguage();
   const [users, setUsers] = useState([]);
   const [passwords, setPasswords] = useState({});
   const [feedback, setFeedback] = useState({});
@@ -16,7 +18,7 @@ export default function UserManager({ onViewUser }) {
   const changePassword = async (userId) => {
     const pw = passwords[userId];
     if (!pw || pw.length < 4) {
-      setFeedback(f => ({ ...f, [userId]: 'Minst 4 tecken' }));
+      setFeedback(f => ({ ...f, [userId]: t('um.minChars') }));
       return;
     }
     const res = await fetch(`${API}/users/${userId}/password`, {
@@ -25,7 +27,7 @@ export default function UserManager({ onViewUser }) {
       body: JSON.stringify({ password: pw }),
     });
     if (res.ok) {
-      setFeedback(f => ({ ...f, [userId]: 'Sparat!' }));
+      setFeedback(f => ({ ...f, [userId]: t('um.saved') }));
       setPasswords(p => ({ ...p, [userId]: '' }));
       setTimeout(() => setFeedback(f => ({ ...f, [userId]: '' })), 2000);
     }
@@ -57,22 +59,24 @@ export default function UserManager({ onViewUser }) {
     }
   };
 
+  const isSaved = (msg) => msg === t('um.saved') || msg === 'Sparat!' || msg === 'Saved!';
+
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
       <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-6 py-4">
-        <h3 className="text-white font-bold text-xl">Användare</h3>
-        <p className="text-indigo-200 text-sm">Hantera tippare, ändra roll/lösenord och se deras tips</p>
+        <h3 className="text-white font-bold text-xl">{t('um.title')}</h3>
+        <p className="text-indigo-200 text-sm">{t('um.subtitle')}</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase tracking-wider">
-              <th className="text-left py-3 px-4">Namn</th>
-              <th className="text-left py-3 px-4">Roll</th>
-              <th className="text-left py-3 px-4">Organisation</th>
-              <th className="text-left py-3 px-4">Registrerad</th>
-              <th className="text-left py-3 px-4">Nytt lösenord</th>
-              <th className="text-center py-3 px-4">Visa tips</th>
+              <th className="text-left py-3 px-4">{t('um.name')}</th>
+              <th className="text-left py-3 px-4">{t('um.role')}</th>
+              <th className="text-left py-3 px-4">{t('um.org')}</th>
+              <th className="text-left py-3 px-4">{t('um.registered')}</th>
+              <th className="text-left py-3 px-4">{t('um.newPassword')}</th>
+              <th className="text-center py-3 px-4">{t('um.viewTips')}</th>
             </tr>
           </thead>
           <tbody>
@@ -89,7 +93,7 @@ export default function UserManager({ onViewUser }) {
                       className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none"
                     >
                       {ROLES.map(r => (
-                        <option key={r} value={r}>{r}</option>
+                        <option key={r} value={r}>{t(`role.${r.toLowerCase()}`) || r}</option>
                       ))}
                     </select>
                   )}
@@ -116,7 +120,7 @@ export default function UserManager({ onViewUser }) {
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
-                      placeholder="Nytt lösenord"
+                      placeholder={t('um.newPassword')}
                       className="w-32 px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
                       value={passwords[u.id] || ''}
                       onChange={e => setPasswords(p => ({ ...p, [u.id]: e.target.value }))}
@@ -125,10 +129,10 @@ export default function UserManager({ onViewUser }) {
                       onClick={() => changePassword(u.id)}
                       className="px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700 transition-colors"
                     >
-                      Spara
+                      {t('um.save')}
                     </button>
                     {feedback[u.id] && (
-                      <span className={`text-xs ${feedback[u.id] === 'Sparat!' ? 'text-green-600' : 'text-red-500'}`}>
+                      <span className={`text-xs ${isSaved(feedback[u.id]) ? 'text-green-600' : 'text-red-500'}`}>
                         {feedback[u.id]}
                       </span>
                     )}
@@ -140,7 +144,7 @@ export default function UserManager({ onViewUser }) {
                       onClick={() => onViewUser(u)}
                       className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs hover:bg-blue-100 transition-colors"
                     >
-                      Visa
+                      {t('um.view')}
                     </button>
                   )}
                 </td>

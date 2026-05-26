@@ -47,7 +47,7 @@ app.post('/api/users/:userId/role', (req, res) => {
 
 app.post('/api/users/:userId/org', (req, res) => {
   const { orgs } = req.body;
-  const validOrgs = ['Enskede', 'QBank'];
+  const validOrgs = ['Enskede', 'QBank', 'Friends'];
   if (!Array.isArray(orgs) || !orgs.every(o => validOrgs.includes(o))) {
     return res.status(400).json({ error: 'Ogiltig organisation' });
   }
@@ -242,7 +242,7 @@ app.get('/api/leaderboard', (_req, res) => {
     }
 
     const userBracket = computeBracketFromData(userGroupRows, userKnockoutRows);
-    const roundPoints = { r16: 5, qf: 5, sf: 10, final: 20 };
+    const roundPoints = { r32: 5, r16: 5, qf: 5, sf: 10, final: 20 };
     for (const [round, pts] of Object.entries(roundPoints)) {
       const userTeams = getTeamsInRound(userBracket, round);
       const adminTeams = getTeamsInRound(adminBracket, round);
@@ -259,6 +259,14 @@ app.get('/api/leaderboard', (_req, res) => {
       if (adminWinner && userBracket.final?.[0]) {
         const userWinner = getMatchWinner(userBracket.final[0]);
         if (userWinner === adminWinner) bonusPoints += 40;
+      }
+    }
+
+    if (adminBracket.bronze?.[0]) {
+      const adminBronzeWinner = getMatchWinner(adminBracket.bronze[0]);
+      if (adminBronzeWinner && userBracket.bronze?.[0]) {
+        const userBronzeWinner = getMatchWinner(userBracket.bronze[0]);
+        if (userBronzeWinner === adminBronzeWinner) bonusPoints += 20;
       }
     }
 

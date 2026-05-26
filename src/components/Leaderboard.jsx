@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth, API } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
-const ROLES = ['Alla', 'Spelare', 'Ledare', 'Förälder', 'Syskon'];
+const ROLE_KEYS = ['Alla', 'Spelare', 'Ledare', 'Förälder', 'Syskon'];
 
 export default function Leaderboard() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState('Alla');
@@ -23,16 +25,22 @@ export default function Leaderboard() {
       .then(d => { setData(d); setLoading(false); });
   }
 
+  const roleLabel = (role) => {
+    if (role === 'Alla') return t('lb.all');
+    return t(`role.${role.toLowerCase()}`) || role;
+  };
+
   const userOrgs = user?.org ? user.org.split(',') : [];
   const orgFiltered = userOrgs.length
     ? data.filter(r => r.org && r.org.split(',').some(o => userOrgs.includes(o)))
     : data;
-  const filtered = roleFilter === 'Alla' ? orgFiltered : orgFiltered.filter(r => r.role === roleFilter);
+  const showRoleFilter = userOrgs.includes('Enskede') && !userOrgs.includes('QBank') && !userOrgs.includes('Friends');
+  const filtered = roleFilter === 'Alla' || !showRoleFilter ? orgFiltered : orgFiltered.filter(r => r.role === roleFilter);
 
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-md border border-gray-200 p-8 text-center">
-        <p className="text-gray-500">Laddar leaderboard...</p>
+        <p className="text-gray-500">{t('lb.loading')}</p>
       </div>
     );
   }
@@ -41,21 +49,21 @@ export default function Leaderboard() {
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
       <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 flex items-center justify-between">
         <div>
-          <h3 className="text-white font-bold text-xl">Ställning</h3>
-          <p className="text-emerald-100 text-sm">Vem leder tippningen?</p>
+          <h3 className="text-white font-bold text-xl">{t('lb.title')}</h3>
+          <p className="text-emerald-100 text-sm">{t('lb.subtitle')}</p>
         </div>
         <button
           onClick={refresh}
           className="bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
         >
-          Uppdatera
+          {t('lb.refresh')}
         </button>
       </div>
 
-      {!userOrgs.includes('QBank') && (
+      {showRoleFilter && (
         <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Filtrera:</span>
-          {ROLES.map(r => (
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('lb.filter')}</span>
+          {ROLE_KEYS.map(r => (
             <button
               key={r}
               onClick={() => setRoleFilter(r)}
@@ -65,7 +73,7 @@ export default function Leaderboard() {
                   : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
               }`}
             >
-              {r}
+              {roleLabel(r)}
             </button>
           ))}
         </div>
@@ -73,23 +81,23 @@ export default function Leaderboard() {
 
       {filtered.length === 0 ? (
         <div className="p-8 text-center text-gray-500">
-          {data.length === 0 ? 'Inga tippare har registrerat sig ännu.' : 'Inga tippare med den rollen.'}
+          {data.length === 0 ? t('lb.empty') : t('lb.noRole')}
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase tracking-wider">
-                <th className="text-left py-3 px-4">#</th>
-                <th className="text-left py-3 px-4">Tippare</th>
-                <th className="text-left py-3 px-4">Roll</th>
-                <th className="text-center py-3 px-4">Gruppspel</th>
-                <th className="text-center py-3 px-4">Slutspel</th>
-                <th className="text-center py-3 px-4">Bonus</th>
-                <th className="text-center py-3 px-4 font-bold">Totalt</th>
-                <th className="text-center py-3 px-4">Exakta</th>
-                <th className="text-center py-3 px-4">Rätt utfall</th>
-                <th className="text-center py-3 px-4">Tips</th>
+                <th className="text-left py-3 px-4">{t('lb.col.rank')}</th>
+                <th className="text-left py-3 px-4">{t('lb.col.player')}</th>
+                <th className="text-left py-3 px-4">{t('lb.col.role')}</th>
+                <th className="text-center py-3 px-4">{t('lb.col.group')}</th>
+                <th className="text-center py-3 px-4">{t('lb.col.knockout')}</th>
+                <th className="text-center py-3 px-4">{t('lb.col.bonus')}</th>
+                <th className="text-center py-3 px-4 font-bold">{t('lb.col.total')}</th>
+                <th className="text-center py-3 px-4">{t('lb.col.exact')}</th>
+                <th className="text-center py-3 px-4">{t('lb.col.outcome')}</th>
+                <th className="text-center py-3 px-4">{t('lb.col.tips')}</th>
               </tr>
             </thead>
             <tbody>
@@ -99,7 +107,7 @@ export default function Leaderboard() {
                     {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
                   </td>
                   <td className="py-3 px-4 font-semibold text-gray-800">{row.name}</td>
-                  <td className="py-3 px-4 text-gray-500 text-xs">{row.role || 'Spelare'}</td>
+                  <td className="py-3 px-4 text-gray-500 text-xs">{t(`role.${(row.role || 'Spelare').toLowerCase()}`) || row.role}</td>
                   <td className="py-3 px-4 text-center">{row.groupPoints}</td>
                   <td className="py-3 px-4 text-center">{row.knockoutPoints}</td>
                   <td className="py-3 px-4 text-center">{row.bonusPoints || 0}</td>

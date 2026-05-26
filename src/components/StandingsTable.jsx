@@ -1,21 +1,23 @@
-import { getFlag } from '../data/flags';
+import { getFlag, getTeamName } from '../data/flags';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function StandingsTable({ standings }) {
+  const { t, lang } = useLanguage();
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-xs text-gray-500 border-b">
             <th className="text-left py-1 px-1">#</th>
-            <th className="text-left py-1 px-1">Lag</th>
-            <th className="py-1 px-1">S</th>
-            <th className="py-1 px-1">V</th>
-            <th className="py-1 px-1">O</th>
-            <th className="py-1 px-1">F</th>
-            <th className="py-1 px-1">GM</th>
-            <th className="py-1 px-1">IM</th>
-            <th className="py-1 px-1">MS</th>
-            <th className="py-1 px-1 font-bold">P</th>
+            <th className="text-left py-1 px-1">{t('st.team')}</th>
+            <th className="py-1 px-1">{t('st.played')}</th>
+            <th className="py-1 px-1">{t('st.wins')}</th>
+            <th className="py-1 px-1">{t('st.draws')}</th>
+            <th className="py-1 px-1">{t('st.losses')}</th>
+            <th className="py-1 px-1">{t('st.gf')}</th>
+            <th className="py-1 px-1">{t('st.ga')}</th>
+            <th className="py-1 px-1">{t('st.gd')}</th>
+            <th className="py-1 px-1 font-bold">{t('st.points')}</th>
           </tr>
         </thead>
         <tbody>
@@ -27,7 +29,7 @@ export default function StandingsTable({ standings }) {
               }`}
             >
               <td className="py-1.5 px-1 text-gray-500 font-medium">{row.position}</td>
-              <td className="py-1.5 px-1 text-left font-medium text-gray-800 whitespace-nowrap">{getFlag(row.team)} {row.team}</td>
+              <td className="py-1.5 px-1 text-left font-medium text-gray-800 whitespace-nowrap">{getFlag(row.team)} {getTeamName(row.team, lang)}</td>
               <td className="py-1.5 px-1 text-center">{row.played}</td>
               <td className="py-1.5 px-1 text-center">{row.wins}</td>
               <td className="py-1.5 px-1 text-center">{row.draws}</td>
