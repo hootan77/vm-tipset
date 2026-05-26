@@ -391,6 +391,12 @@ app.get('/api/users/:id/predictions', (req, res) => {
   res.json({ groups: groupMap, knockout: knockoutMap, topScorer: topScorer?.player_name || '' });
 });
 
+// Debug: raw user list (remove after debugging)
+app.get('/api/debug/users', (_req, res) => {
+  const users = db.prepare('SELECT * FROM users').all();
+  res.json(users.map(({ password_hash, ...rest }) => rest));
+});
+
 const distPath = path.join(__dirname, '..', 'dist');
 app.use(express.static(distPath));
 app.get('/{*path}', (req, res) => {
