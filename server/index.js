@@ -242,31 +242,40 @@ app.get('/api/leaderboard', (_req, res) => {
     }
 
     const userBracket = computeBracketFromData(userGroupRows, userKnockoutRows);
-    const roundPoints = { r32: 5, r16: 5, qf: 5, sf: 10, final: 20 };
-    for (const [round, pts] of Object.entries(roundPoints)) {
-      const userTeams = getTeamsInRound(userBracket, round);
-      const adminTeams = getTeamsInRound(adminBracket, round);
-      if (adminTeams.size === 0) continue;
-      for (const team of userTeams) {
-        if (adminTeams.has(team)) knockoutPoints += pts;
+
+    // Only award knockout team/bonus points if the user has filled in all 72 group matches
+    const completedGroupPreds = userGroupRows.filter(p => p.home_goals != null && p.away_goals != null).length;
+    const allGroupsComplete = completedGroupPreds >= 72;
+
+    if (allGroupsComplete) {
+      const roundPointsMap = { r32: 5, r16: 5, qf: 5, sf: 10, final: 20 };
+      for (const [round, pts] of Object.entries(roundPointsMap)) {
+        const userTeams = getTeamsInRound(userBracket, round);
+        const adminTeams = getTeamsInRound(adminBracket, round);
+        if (adminTeams.size === 0) continue;
+        for (const team of userTeams) {
+          if (adminTeams.has(team)) knockoutPoints += pts;
+        }
       }
     }
 
     let bonusPoints = 0;
 
-    if (adminBracket.final?.[0]) {
-      const adminWinner = getMatchWinner(adminBracket.final[0]);
-      if (adminWinner && userBracket.final?.[0]) {
-        const userWinner = getMatchWinner(userBracket.final[0]);
-        if (userWinner === adminWinner) bonusPoints += 40;
+    if (allGroupsComplete) {
+      if (adminBracket.final?.[0]) {
+        const adminWinner = getMatchWinner(adminBracket.final[0]);
+        if (adminWinner && userBracket.final?.[0]) {
+          const userWinner = getMatchWinner(userBracket.final[0]);
+          if (userWinner === adminWinner) bonusPoints += 40;
+        }
       }
-    }
 
-    if (adminBracket.bronze?.[0]) {
-      const adminBronzeWinner = getMatchWinner(adminBracket.bronze[0]);
-      if (adminBronzeWinner && userBracket.bronze?.[0]) {
-        const userBronzeWinner = getMatchWinner(userBracket.bronze[0]);
-        if (userBronzeWinner === adminBronzeWinner) bonusPoints += 20;
+      if (adminBracket.bronze?.[0]) {
+        const adminBronzeWinner = getMatchWinner(adminBracket.bronze[0]);
+        if (adminBronzeWinner && userBracket.bronze?.[0]) {
+          const userBronzeWinner = getMatchWinner(userBracket.bronze[0]);
+          if (userBronzeWinner === adminBronzeWinner) bonusPoints += 20;
+        }
       }
     }
 
