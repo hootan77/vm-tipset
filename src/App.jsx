@@ -22,6 +22,7 @@ function BonusQuestions({ isAdmin }) {
   const topScorer = isAdmin ? state.adminTopScorer : state.topScorer;
   const redCard = isAdmin ? state.adminFirstRedCardNation : state.firstRedCardNation;
   const goldenGlove = isAdmin ? state.adminGoldenGlove : state.goldenGlove;
+  const tiebreaker = isAdmin ? state.adminTiebreaker : state.tiebreaker;
 
   const inputClass = `w-full max-w-sm px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`;
 
@@ -49,11 +50,20 @@ function BonusQuestions({ isAdmin }) {
         </div>
         <div className="border-t pt-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            🧤 {t('predict.goldenGlove')} <span className="text-purple-500 text-xs font-normal">(20p)</span>
+            🧤 {t('predict.goldenGlove')} <span className="text-purple-500 text-xs font-normal">(40p)</span>
           </label>
           <p className="text-xs text-gray-500 mb-2">{isAdmin ? t('predict.goldenGloveAdmin') : t('predict.goldenGloveUser')}</p>
           <input type="text" disabled={readOnly} placeholder={t('predict.goldenGlovePlaceholder')} className={inputClass}
             value={goldenGlove} onChange={e => { if (!readOnly) saveBonusField('goldenGlove', e.target.value, isAdmin); }} />
+        </div>
+        <div className="border-t pt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            🎯 {t('predict.tiebreaker')}
+          </label>
+          <p className="text-xs text-gray-500 mb-1 font-medium">{t('predict.tiebreakerQuestion')}</p>
+          <p className="text-xs text-gray-500 mb-2">{isAdmin ? t('predict.tiebreakerAdmin') : t('predict.tiebreakerUser')}</p>
+          <input type="number" disabled={readOnly} placeholder={t('predict.tiebreakerPlaceholder')} className={inputClass}
+            value={tiebreaker ?? ''} onChange={e => { if (!readOnly) saveBonusField('tiebreaker', e.target.value ? parseInt(e.target.value) : null, isAdmin); }} />
         </div>
       </div>
     </div>
@@ -146,8 +156,14 @@ function ScoringRulesButton() {
                   <div className="flex justify-between"><span className="text-gray-600">{t('rules.winner')}</span><span className="font-bold text-amber-600">40 {t('rules.points')}</span></div>
                   <div className="flex justify-between"><span className="text-gray-600">{t('rules.bronze')}</span><span className="font-bold text-amber-600">20 {t('rules.points')}</span></div>
                   <div className="flex justify-between"><span className="text-gray-600">{t('rules.redCard')}</span><span className="font-bold text-amber-600">20 {t('rules.points')}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-600">{t('rules.goldenGlove')}</span><span className="font-bold text-amber-600">20 {t('rules.points')}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-600">{t('rules.goldenGlove')}</span><span className="font-bold text-amber-600">40 {t('rules.points')}</span></div>
                   <div className="flex justify-between"><span className="text-gray-600">{t('rules.topScorer')}</span><span className="font-bold text-amber-600">50 {t('rules.points')}</span></div>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">{t('rules.tiebreakerTitle')}</h4>
+                <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+                  {t('rules.tiebreakerDesc')}
                 </div>
               </div>
               <div className="text-xs text-gray-400 pt-2 border-t">{t('rules.tiebreaker')}</div>

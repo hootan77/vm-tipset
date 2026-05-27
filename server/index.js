@@ -287,7 +287,7 @@ app.get('/api/leaderboard', (_req, res) => {
       }
     }
 
-    const userBonus = db.prepare('SELECT first_red_card_nation, golden_glove FROM bonus_predictions WHERE user_id = ?').get(user.id);
+    const userBonus = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM bonus_predictions WHERE user_id = ?').get(user.id);
     if (adminBonus && userBonus) {
       if (adminBonus.first_red_card_nation && userBonus.first_red_card_nation &&
           userBonus.first_red_card_nation.trim().toLowerCase() === adminBonus.first_red_card_nation.trim().toLowerCase()) {
@@ -295,9 +295,13 @@ app.get('/api/leaderboard', (_req, res) => {
       }
       if (adminBonus.golden_glove && userBonus.golden_glove &&
           userBonus.golden_glove.trim().toLowerCase() === adminBonus.golden_glove.trim().toLowerCase()) {
-        bonusPoints += 20;
+        bonusPoints += 40;
       }
     }
+
+    const tiebreakerDiff = (adminBonus?.tiebreaker != null && userBonus?.tiebreaker != null)
+      ? Math.abs(userBonus.tiebreaker - adminBonus.tiebreaker)
+      : null;
 
     const totalPredictions = userGroupRows.filter(p => p.home_goals != null && p.away_goals != null).length;
 
@@ -313,10 +317,18 @@ app.get('/api/leaderboard', (_req, res) => {
       exactResults,
       correctOutcomes,
       totalPredictions,
+      tiebreakerDiff,
     });
   }
 
-  leaderboard.sort((a, b) => b.total - a.total || b.exactResults - a.exactResults);
+  leaderboard.sort((a, b) => {
+    if (b.total !== a.total) return b.total - a.total;
+    if (b.exactResults !== a.exactResults) return b.exactResults - a.exactResults;
+    // Tiebreaker: closest guess wins (lower diff = better)
+    const aDiff = a.tiebreakerDiff ?? Infinity;
+    const bDiff = b.tiebreakerDiff ?? Infinity;
+    return aDiff - bDiff;
+  });
   res.json(leaderboard);
 });
 
@@ -353,30 +365,30 @@ app.post('/api/admin/top-scorer', (req, res) => {
 // ── Bonus predictions (red card nation, golden glove) ──
 
 app.get('/api/predictions/:userId/bonus', (req, res) => {
-  const row = db.prepare('SELECT first_red_card_nation, golden_glove FROM bonus_predictions WHERE user_id = ?').get(req.params.userId);
-  res.json({ firstRedCardNation: row?.first_red_card_nation || '', goldenGlove: row?.golden_glove || '' });
+  const row = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM bonus_predictions WHERE user_id = ?').get(req.params.userId);
+  res.json({ firstRedCardNation: row?.first_red_card_nation || '', goldenGlove: row?.golden_glove || '', tiebreaker: row?.tiebreaker ?? null });
 });
 
 app.post('/api/predictions/:userId/bonus', (req, res) => {
-  const { firstRedCardNation, goldenGlove } = req.body;
+  const { firstRedCardNation, goldenGlove, tiebreaker } = req.body;
   db.prepare(`
-    INSERT INTO bonus_predictions (user_id, first_red_card_nation, golden_glove) VALUES (?, ?, ?)
-    ON CONFLICT(user_id) DO UPDATE SET first_red_card_nation = excluded.first_red_card_nation, golden_glove = excluded.golden_glove
-  `).run(parseInt(req.params.userId), firstRedCardNation || '', goldenGlove || '');
+    INSERT INTO bonus_predictions (user_id, first_red_card_nation, golden_glove, tiebreaker) VALUES (?, ?, ?, ?)
+    ON CONFLICT(user_id) DO UPDATE SET first_red_card_nation = excluded.first_red_card_nation, golden_glove = excluded.golden_glove, tiebreaker = excluded.tiebreaker
+  `).run(parseInt(req.params.userId), firstRedCardNation || '', goldenGlove || '', tiebreaker != null ? parseInt(tiebreaker) : null);
   res.json({ ok: true });
 });
 
 app.get('/api/admin/bonus', (_req, res) => {
-  const row = db.prepare('SELECT first_red_card_nation, golden_glove FROM admin_bonus WHERE id = 1').get();
-  res.json({ firstRedCardNation: row?.first_red_card_nation || '', goldenGlove: row?.golden_glove || '' });
+  const row = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM admin_bonus WHERE id = 1').get();
+  res.json({ firstRedCardNation: row?.first_red_card_nation || '', goldenGlove: row?.golden_glove || '', tiebreaker: row?.tiebreaker ?? null });
 });
 
 app.post('/api/admin/bonus', (req, res) => {
-  const { firstRedCardNation, goldenGlove } = req.body;
+  const { firstRedCardNation, goldenGlove, tiebreaker } = req.body;
   db.prepare(`
-    INSERT INTO admin_bonus (id, first_red_card_nation, golden_glove) VALUES (1, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET first_red_card_nation = excluded.first_red_card_nation, golden_glove = excluded.golden_glove
-  `).run(firstRedCardNation || '', goldenGlove || '');
+    INSERT INTO admin_bonus (id, first_red_card_nation, golden_glove, tiebreaker) VALUES (1, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET first_red_card_nation = excluded.first_red_card_nation, golden_glove = excluded.golden_glove, tiebreaker = excluded.tiebreaker
+  `).run(firstRedCardNation || '', goldenGlove || '', tiebreaker != null ? parseInt(tiebreaker) : null);
   res.json({ ok: true });
 });
 
@@ -421,7 +433,7 @@ app.get('/api/users/:id/predictions', (req, res) => {
   const groups = db.prepare('SELECT group_name, match_index, home_goals, away_goals FROM group_predictions WHERE user_id = ?').all(userId);
   const knockout = db.prepare('SELECT match_id, home_goals, away_goals FROM knockout_predictions WHERE user_id = ?').all(userId);
   const topScorer = db.prepare('SELECT player_name FROM top_scorer_predictions WHERE user_id = ?').get(userId);
-  const bonus = db.prepare('SELECT first_red_card_nation, golden_glove FROM bonus_predictions WHERE user_id = ?').get(userId);
+  const bonus = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM bonus_predictions WHERE user_id = ?').get(userId);
 
   const groupMap = {};
   for (const r of groups) {
@@ -438,6 +450,7 @@ app.get('/api/users/:id/predictions', (req, res) => {
     topScorer: topScorer?.player_name || '',
     firstRedCardNation: bonus?.first_red_card_nation || '',
     goldenGlove: bonus?.golden_glove || '',
+    tiebreaker: bonus?.tiebreaker ?? null,
   });
 });
 

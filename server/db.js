@@ -81,12 +81,14 @@ db.exec(`
     user_id INTEGER NOT NULL UNIQUE,
     first_red_card_nation TEXT,
     golden_glove TEXT,
+    tiebreaker INTEGER,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
   CREATE TABLE IF NOT EXISTS admin_bonus (
     id INTEGER PRIMARY KEY,
     first_red_card_nation TEXT,
-    golden_glove TEXT
+    golden_glove TEXT,
+    tiebreaker INTEGER
   );
 `);
 
@@ -98,6 +100,8 @@ try { db.exec("ALTER TABLE users ADD COLUMN username TEXT"); } catch(e) {}
 try { db.exec("UPDATE users SET username = name WHERE username IS NULL"); } catch(e) {}
 try { db.exec("UPDATE users SET display_name = name WHERE display_name IS NULL"); } catch(e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN org TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE bonus_predictions ADD COLUMN tiebreaker INTEGER"); } catch(e) {}
+try { db.exec("ALTER TABLE admin_bonus ADD COLUMN tiebreaker INTEGER"); } catch(e) {}
 
 import bcrypt from 'bcryptjs';
 const adminExists = db.prepare('SELECT id FROM users WHERE is_admin = 1').get();

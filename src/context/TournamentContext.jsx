@@ -30,6 +30,8 @@ function initState() {
     adminFirstRedCardNation: '',
     goldenGlove: '',
     adminGoldenGlove: '',
+    tiebreaker: null,
+    adminTiebreaker: null,
     loaded: false,
   };
 }
@@ -96,9 +98,9 @@ function reducer(state, action) {
     case 'SET_BONUS_FIELD':
       return { ...state, [action.field]: action.value };
     case 'LOAD_BONUS':
-      return { ...state, firstRedCardNation: action.data.firstRedCardNation, goldenGlove: action.data.goldenGlove };
+      return { ...state, firstRedCardNation: action.data.firstRedCardNation, goldenGlove: action.data.goldenGlove, tiebreaker: action.data.tiebreaker };
     case 'LOAD_ADMIN_BONUS':
-      return { ...state, adminFirstRedCardNation: action.data.firstRedCardNation, adminGoldenGlove: action.data.goldenGlove };
+      return { ...state, adminFirstRedCardNation: action.data.firstRedCardNation, adminGoldenGlove: action.data.goldenGlove, adminTiebreaker: action.data.tiebreaker };
     default:
       return state;
   }
@@ -201,15 +203,13 @@ export function TournamentProvider({ children }) {
   }, [user]);
 
   const saveBonusField = useCallback((field, value, isAdmin) => {
-    const stateField = isAdmin
-      ? (field === 'firstRedCardNation' ? 'adminFirstRedCardNation' : 'adminGoldenGlove')
-      : field;
+    const fieldMap = { firstRedCardNation: 'adminFirstRedCardNation', goldenGlove: 'adminGoldenGlove', tiebreaker: 'adminTiebreaker' };
+    const stateField = isAdmin ? (fieldMap[field] || field) : field;
     dispatch({ type: 'SET_BONUS_FIELD', field: stateField, value });
 
-    // Debounce: save both fields together
     const currentState = isAdmin
-      ? { firstRedCardNation: state.adminFirstRedCardNation, goldenGlove: state.adminGoldenGlove }
-      : { firstRedCardNation: state.firstRedCardNation, goldenGlove: state.goldenGlove };
+      ? { firstRedCardNation: state.adminFirstRedCardNation, goldenGlove: state.adminGoldenGlove, tiebreaker: state.adminTiebreaker }
+      : { firstRedCardNation: state.firstRedCardNation, goldenGlove: state.goldenGlove, tiebreaker: state.tiebreaker };
     const updated = { ...currentState, [field]: value };
 
     const url = isAdmin ? `${API}/admin/bonus` : `${API}/predictions/${user.id}/bonus`;

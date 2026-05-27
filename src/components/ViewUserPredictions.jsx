@@ -50,6 +50,9 @@ export default function ViewUserPredictions({ viewUser, onBack }) {
           {data.goldenGlove && (
             <div><span className="text-sm font-semibold text-purple-700">🧤 {t('predict.goldenGlove')}: </span><span className="text-purple-900">{data.goldenGlove}</span></div>
           )}
+          {data.tiebreaker != null && (
+            <div><span className="text-sm font-semibold text-purple-700">🎯 {t('predict.tiebreaker')}: </span><span className="text-purple-900">{data.tiebreaker}</span></div>
+          )}
         </div>
       )}
 
