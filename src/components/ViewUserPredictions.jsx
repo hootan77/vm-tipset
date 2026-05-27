@@ -39,10 +39,17 @@ export default function ViewUserPredictions({ viewUser, onBack }) {
         </h2>
       </div>
 
-      {data.topScorer && (
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-          <span className="text-sm font-semibold text-purple-700">{t('vp.topScorer')} </span>
-          <span className="text-purple-900">{data.topScorer}</span>
+      {(data.topScorer || data.firstRedCardNation || data.goldenGlove) && (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-1">
+          {data.topScorer && (
+            <div><span className="text-sm font-semibold text-purple-700">🏅 {t('vp.topScorer')} </span><span className="text-purple-900">{data.topScorer}</span></div>
+          )}
+          {data.firstRedCardNation && (
+            <div><span className="text-sm font-semibold text-purple-700">🟥 {t('predict.redCard')}: </span><span className="text-purple-900">{data.firstRedCardNation}</span></div>
+          )}
+          {data.goldenGlove && (
+            <div><span className="text-sm font-semibold text-purple-700">🧤 {t('predict.goldenGlove')}: </span><span className="text-purple-900">{data.goldenGlove}</span></div>
+          )}
         </div>
       )}
 

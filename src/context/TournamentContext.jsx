@@ -26,6 +26,10 @@ function initState() {
     adminKnockoutPredictions: {},
     topScorer: '',
     adminTopScorer: '',
+    firstRedCardNation: '',
+    adminFirstRedCardNation: '',
+    goldenGlove: '',
+    adminGoldenGlove: '',
     loaded: false,
   };
 }
@@ -89,6 +93,12 @@ function reducer(state, action) {
       return { ...state, topScorer: action.data };
     case 'LOAD_ADMIN_TOP_SCORER':
       return { ...state, adminTopScorer: action.data };
+    case 'SET_BONUS_FIELD':
+      return { ...state, [action.field]: action.value };
+    case 'LOAD_BONUS':
+      return { ...state, firstRedCardNation: action.data.firstRedCardNation, goldenGlove: action.data.goldenGlove };
+    case 'LOAD_ADMIN_BONUS':
+      return { ...state, adminFirstRedCardNation: action.data.firstRedCardNation, adminGoldenGlove: action.data.goldenGlove };
     default:
       return state;
   }
@@ -109,13 +119,15 @@ export function TournamentProvider({ children }) {
   useEffect(() => {
     if (!user) return;
     async function load() {
-      const [groupRes, knockoutRes, adminGroupRes, adminKnockoutRes, tsRes, adminTsRes] = await Promise.all([
+      const [groupRes, knockoutRes, adminGroupRes, adminKnockoutRes, tsRes, adminTsRes, bonusRes, adminBonusRes] = await Promise.all([
         fetch(`${API}/predictions/${user.id}/groups`),
         fetch(`${API}/predictions/${user.id}/knockout`),
         fetch(`${API}/admin/groups`),
         fetch(`${API}/admin/knockout`),
         fetch(`${API}/predictions/${user.id}/top-scorer`),
         fetch(`${API}/admin/top-scorer`),
+        fetch(`${API}/predictions/${user.id}/bonus`),
+        fetch(`${API}/admin/bonus`),
       ]);
       dispatch({ type: 'LOAD_GROUP_PREDICTIONS', data: await groupRes.json() });
       dispatch({ type: 'LOAD_KNOCKOUT_PREDICTIONS', data: await knockoutRes.json() });
@@ -125,6 +137,8 @@ export function TournamentProvider({ children }) {
       dispatch({ type: 'LOAD_TOP_SCORER', data: ts.playerName || '' });
       const ats = await adminTsRes.json();
       dispatch({ type: 'LOAD_ADMIN_TOP_SCORER', data: ats.playerName || '' });
+      dispatch({ type: 'LOAD_BONUS', data: await bonusRes.json() });
+      dispatch({ type: 'LOAD_ADMIN_BONUS', data: await adminBonusRes.json() });
     }
     load();
   }, [user]);
@@ -186,6 +200,26 @@ export function TournamentProvider({ children }) {
     });
   }, [user]);
 
+  const saveBonusField = useCallback((field, value, isAdmin) => {
+    const stateField = isAdmin
+      ? (field === 'firstRedCardNation' ? 'adminFirstRedCardNation' : 'adminGoldenGlove')
+      : field;
+    dispatch({ type: 'SET_BONUS_FIELD', field: stateField, value });
+
+    // Debounce: save both fields together
+    const currentState = isAdmin
+      ? { firstRedCardNation: state.adminFirstRedCardNation, goldenGlove: state.adminGoldenGlove }
+      : { firstRedCardNation: state.firstRedCardNation, goldenGlove: state.goldenGlove };
+    const updated = { ...currentState, [field]: value };
+
+    const url = isAdmin ? `${API}/admin/bonus` : `${API}/predictions/${user.id}/bonus`;
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated),
+    });
+  }, [state, user]);
+
   const toggleLock = useCallback(async () => {
     const newVal = !locked;
     setLocked(newVal);
@@ -233,7 +267,7 @@ export function TournamentProvider({ children }) {
   }, [state, computeStandings]);
 
   return (
-    <TournamentContext.Provider value={{ state, dispatch, computed, saveGroupScore, saveKnockoutScore, saveTopScorer, locked, toggleLock }}>
+    <TournamentContext.Provider value={{ state, dispatch, computed, saveGroupScore, saveKnockoutScore, saveTopScorer, saveBonusField, locked, toggleLock }}>
       {children}
     </TournamentContext.Provider>
   );

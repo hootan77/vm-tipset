@@ -75,6 +75,21 @@ db.exec(`
   );
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS bonus_predictions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL UNIQUE,
+    first_red_card_nation TEXT,
+    golden_glove TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+  CREATE TABLE IF NOT EXISTS admin_bonus (
+    id INTEGER PRIMARY KEY,
+    first_red_card_nation TEXT,
+    golden_glove TEXT
+  );
+`);
+
 try { db.exec('ALTER TABLE knockout_predictions ADD COLUMN penalty_winner TEXT'); } catch(e) {}
 try { db.exec('ALTER TABLE admin_knockout_results ADD COLUMN penalty_winner TEXT'); } catch(e) {}
 try { db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'Spelare'"); } catch(e) {}

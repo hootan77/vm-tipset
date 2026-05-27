@@ -189,6 +189,7 @@ app.get('/api/leaderboard', (_req, res) => {
 
   const adminBracket = computeBracketFromData(adminGroupRows, adminKnockoutRows);
   const adminTopScorer = db.prepare('SELECT player_name FROM admin_top_scorer WHERE id = 1').get();
+  const adminBonus = db.prepare('SELECT first_red_card_nation, golden_glove FROM admin_bonus WHERE id = 1').get();
 
   const leaderboard = [];
 
@@ -286,6 +287,18 @@ app.get('/api/leaderboard', (_req, res) => {
       }
     }
 
+    const userBonus = db.prepare('SELECT first_red_card_nation, golden_glove FROM bonus_predictions WHERE user_id = ?').get(user.id);
+    if (adminBonus && userBonus) {
+      if (adminBonus.first_red_card_nation && userBonus.first_red_card_nation &&
+          userBonus.first_red_card_nation.trim().toLowerCase() === adminBonus.first_red_card_nation.trim().toLowerCase()) {
+        bonusPoints += 20;
+      }
+      if (adminBonus.golden_glove && userBonus.golden_glove &&
+          userBonus.golden_glove.trim().toLowerCase() === adminBonus.golden_glove.trim().toLowerCase()) {
+        bonusPoints += 20;
+      }
+    }
+
     const totalPredictions = userGroupRows.filter(p => p.home_goals != null && p.away_goals != null).length;
 
     leaderboard.push({
@@ -337,6 +350,36 @@ app.post('/api/admin/top-scorer', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Bonus predictions (red card nation, golden glove) ──
+
+app.get('/api/predictions/:userId/bonus', (req, res) => {
+  const row = db.prepare('SELECT first_red_card_nation, golden_glove FROM bonus_predictions WHERE user_id = ?').get(req.params.userId);
+  res.json({ firstRedCardNation: row?.first_red_card_nation || '', goldenGlove: row?.golden_glove || '' });
+});
+
+app.post('/api/predictions/:userId/bonus', (req, res) => {
+  const { firstRedCardNation, goldenGlove } = req.body;
+  db.prepare(`
+    INSERT INTO bonus_predictions (user_id, first_red_card_nation, golden_glove) VALUES (?, ?, ?)
+    ON CONFLICT(user_id) DO UPDATE SET first_red_card_nation = excluded.first_red_card_nation, golden_glove = excluded.golden_glove
+  `).run(parseInt(req.params.userId), firstRedCardNation || '', goldenGlove || '');
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/bonus', (_req, res) => {
+  const row = db.prepare('SELECT first_red_card_nation, golden_glove FROM admin_bonus WHERE id = 1').get();
+  res.json({ firstRedCardNation: row?.first_red_card_nation || '', goldenGlove: row?.golden_glove || '' });
+});
+
+app.post('/api/admin/bonus', (req, res) => {
+  const { firstRedCardNation, goldenGlove } = req.body;
+  db.prepare(`
+    INSERT INTO admin_bonus (id, first_red_card_nation, golden_glove) VALUES (1, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET first_red_card_nation = excluded.first_red_card_nation, golden_glove = excluded.golden_glove
+  `).run(firstRedCardNation || '', goldenGlove || '');
+  res.json({ ok: true });
+});
+
 // ── Lock / Settings ──
 
 app.get('/api/settings', (_req, res) => {
@@ -378,6 +421,7 @@ app.get('/api/users/:id/predictions', (req, res) => {
   const groups = db.prepare('SELECT group_name, match_index, home_goals, away_goals FROM group_predictions WHERE user_id = ?').all(userId);
   const knockout = db.prepare('SELECT match_id, home_goals, away_goals FROM knockout_predictions WHERE user_id = ?').all(userId);
   const topScorer = db.prepare('SELECT player_name FROM top_scorer_predictions WHERE user_id = ?').get(userId);
+  const bonus = db.prepare('SELECT first_red_card_nation, golden_glove FROM bonus_predictions WHERE user_id = ?').get(userId);
 
   const groupMap = {};
   for (const r of groups) {
@@ -388,7 +432,13 @@ app.get('/api/users/:id/predictions', (req, res) => {
   for (const r of knockout) {
     knockoutMap[r.match_id] = { homeGoals: r.home_goals, awayGoals: r.away_goals };
   }
-  res.json({ groups: groupMap, knockout: knockoutMap, topScorer: topScorer?.player_name || '' });
+  res.json({
+    groups: groupMap,
+    knockout: knockoutMap,
+    topScorer: topScorer?.player_name || '',
+    firstRedCardNation: bonus?.first_red_card_nation || '',
+    goldenGlove: bonus?.golden_glove || '',
+  });
 });
 
 // Debug: raw user list (remove after debugging)
