@@ -177,6 +177,14 @@ const translations = {
     'vp.col.points': 'P',
     'vp.col.gd': 'MS',
 
+    // Bonus override (admin view)
+    'bo.award': 'Godkänn',
+    'bo.revoke': 'Ångra',
+    'bo.awarded': 'Poäng tilldelad',
+    'bo.adminAnswer': 'Facit:',
+    'bo.userAnswer': 'Svar:',
+    'bo.noAnswer': 'Inget svar',
+
     // Venues
     'venues.title': 'VM Arenor 2026',
     'venues.subtitle': '{count} arenor i 3 länder — total kapacitet {capacity} platser',
@@ -380,6 +388,14 @@ const translations = {
     'vp.col.team': 'Team',
     'vp.col.points': 'P',
     'vp.col.gd': 'GD',
+
+    // Bonus override (admin view)
+    'bo.award': 'Award',
+    'bo.revoke': 'Revoke',
+    'bo.awarded': 'Points awarded',
+    'bo.adminAnswer': 'Correct:',
+    'bo.userAnswer': 'Answer:',
+    'bo.noAnswer': 'No answer',
 
     // Venues
     'venues.title': 'WC Venues 2026',

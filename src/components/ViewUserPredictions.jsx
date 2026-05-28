@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { API } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { TEAMS, GROUP_NAMES, getGroupMatchesForGroup } from '../data/teams';
@@ -15,6 +15,20 @@ export default function ViewUserPredictions({ viewUser, onBack }) {
       .then(setData);
   }, [viewUser.id]);
 
+  const toggleOverride = useCallback(async (field, currentlyAwarded) => {
+    const newVal = !currentlyAwarded;
+    // Optimistic update
+    setData(prev => ({
+      ...prev,
+      overrides: { ...prev.overrides, [field]: newVal },
+    }));
+    await fetch(`${API}/admin/bonus-overrides/${viewUser.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field, awarded: newVal }),
+    });
+  }, [viewUser.id]);
+
   if (!data) return <p className="text-gray-500 p-8">{t('vp.loading')}</p>;
 
   const groupMatches = {};
@@ -23,6 +37,21 @@ export default function ViewUserPredictions({ viewUser, onBack }) {
       const pred = data.groups[group]?.[i];
       return { ...m, homeGoals: pred?.homeGoals ?? null, awayGoals: pred?.awayGoals ?? null };
     });
+  }
+
+  const overrides = data.overrides || {};
+  const admin = data.adminAnswers || {};
+
+  const bonusQuestions = [
+    { key: 'topScorer', emoji: '🏅', label: t('predict.topScorer'), points: '50p', userVal: data.topScorer, adminVal: admin.topScorer },
+    { key: 'firstRedCardNation', emoji: '🟥', label: t('predict.redCard'), points: '20p', userVal: data.firstRedCardNation, adminVal: admin.firstRedCardNation },
+    { key: 'goldenGlove', emoji: '🧤', label: t('predict.goldenGlove'), points: '40p', userVal: data.goldenGlove, adminVal: admin.goldenGlove },
+  ];
+
+  // Check if answers match automatically (case-insensitive)
+  function autoMatch(userVal, adminVal) {
+    if (!userVal || !adminVal) return false;
+    return userVal.trim().toLowerCase() === adminVal.trim().toLowerCase();
   }
 
   return (
@@ -39,22 +68,88 @@ export default function ViewUserPredictions({ viewUser, onBack }) {
         </h2>
       </div>
 
-      {(data.topScorer || data.firstRedCardNation || data.goldenGlove) && (
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-1">
-          {data.topScorer && (
-            <div><span className="text-sm font-semibold text-purple-700">🏅 {t('vp.topScorer')} </span><span className="text-purple-900">{data.topScorer}</span></div>
-          )}
-          {data.firstRedCardNation && (
-            <div><span className="text-sm font-semibold text-purple-700">🟥 {t('predict.redCard')}: </span><span className="text-purple-900">{data.firstRedCardNation}</span></div>
-          )}
-          {data.goldenGlove && (
-            <div><span className="text-sm font-semibold text-purple-700">🧤 {t('predict.goldenGlove')}: </span><span className="text-purple-900">{data.goldenGlove}</span></div>
-          )}
-          {data.tiebreaker != null && (
-            <div><span className="text-sm font-semibold text-purple-700">🎯 {t('predict.tiebreaker')}: </span><span className="text-purple-900">{data.tiebreaker}</span></div>
-          )}
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+        <div className="px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-800">
+          <h3 className="text-white font-bold text-lg">{t('rules.bonus')}</h3>
         </div>
-      )}
+        <div className="p-4 space-y-3">
+          {bonusQuestions.map(({ key, emoji, label, points, userVal, adminVal }) => {
+            const isAutoMatch = autoMatch(userVal, adminVal);
+            const isOverridden = !!overrides[key];
+            const isAwarded = isAutoMatch || isOverridden;
+
+            return (
+              <div key={key} className={`rounded-lg border p-3 ${isAwarded ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span>{emoji}</span>
+                    <span className="font-semibold text-gray-800">{label}</span>
+                    <span className="text-xs text-purple-500">({points})</span>
+                  </div>
+                  {isAwarded && (
+                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
+                      ✓ {t('bo.awarded')}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-2">
+                  <div>
+                    <span className="text-xs text-gray-500">{t('bo.userAnswer')}</span>
+                    <p className={`font-medium ${userVal ? 'text-gray-800' : 'text-gray-400 italic'}`}>
+                      {userVal || t('bo.noAnswer')}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">{t('bo.adminAnswer')}</span>
+                    <p className={`font-medium ${adminVal ? 'text-gray-800' : 'text-gray-400 italic'}`}>
+                      {adminVal || t('bo.noAnswer')}
+                    </p>
+                  </div>
+                </div>
+                {!isAutoMatch && userVal && (
+                  <button
+                    onClick={() => toggleOverride(key, isOverridden)}
+                    className={`text-xs px-3 py-1 rounded-lg font-medium transition-colors ${
+                      isOverridden
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200 border border-red-200'
+                        : 'bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200'
+                    }`}
+                  >
+                    {isOverridden ? `✕ ${t('bo.revoke')}` : `✓ ${t('bo.award')}`}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Tiebreaker - display only, no override */}
+          <div className="rounded-lg border bg-gray-50 border-gray-200 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span>🎯</span>
+              <span className="font-semibold text-gray-800">{t('predict.tiebreaker')}</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="text-xs text-gray-500">{t('bo.userAnswer')}</span>
+                <p className={`font-medium ${data.tiebreaker != null ? 'text-gray-800' : 'text-gray-400 italic'}`}>
+                  {data.tiebreaker != null ? data.tiebreaker.toLocaleString() : t('bo.noAnswer')}
+                </p>
+              </div>
+              <div>
+                <span className="text-xs text-gray-500">{t('bo.adminAnswer')}</span>
+                <p className={`font-medium ${admin.tiebreaker != null ? 'text-gray-800' : 'text-gray-400 italic'}`}>
+                  {admin.tiebreaker != null ? admin.tiebreaker.toLocaleString() : t('bo.noAnswer')}
+                </p>
+              </div>
+            </div>
+            {data.tiebreaker != null && admin.tiebreaker != null && (
+              <p className="text-xs text-gray-500 mt-1">
+                Diff: {Math.abs(data.tiebreaker - admin.tiebreaker).toLocaleString()}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {GROUP_NAMES.map(group => {

@@ -280,8 +280,15 @@ app.get('/api/leaderboard', (_req, res) => {
       }
     }
 
+    // Load manual overrides for this user
+    const overrideRows = db.prepare('SELECT field, awarded FROM bonus_overrides WHERE user_id = ?').all(user.id);
+    const overrides = {};
+    for (const r of overrideRows) overrides[r.field] = !!r.awarded;
+
     const userTopScorer = db.prepare('SELECT player_name FROM top_scorer_predictions WHERE user_id = ?').get(user.id);
-    if (adminTopScorer && adminTopScorer.player_name && userTopScorer?.player_name) {
+    if (overrides.topScorer) {
+      bonusPoints += 50;
+    } else if (adminTopScorer && adminTopScorer.player_name && userTopScorer?.player_name) {
       if (userTopScorer.player_name.trim().toLowerCase() === adminTopScorer.player_name.trim().toLowerCase()) {
         bonusPoints += 50;
       }
@@ -289,11 +296,15 @@ app.get('/api/leaderboard', (_req, res) => {
 
     const userBonus = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM bonus_predictions WHERE user_id = ?').get(user.id);
     if (adminBonus && userBonus) {
-      if (adminBonus.first_red_card_nation && userBonus.first_red_card_nation &&
+      if (overrides.firstRedCardNation) {
+        bonusPoints += 20;
+      } else if (adminBonus.first_red_card_nation && userBonus.first_red_card_nation &&
           userBonus.first_red_card_nation.trim().toLowerCase() === adminBonus.first_red_card_nation.trim().toLowerCase()) {
         bonusPoints += 20;
       }
-      if (adminBonus.golden_glove && userBonus.golden_glove &&
+      if (overrides.goldenGlove) {
+        bonusPoints += 40;
+      } else if (adminBonus.golden_glove && userBonus.golden_glove &&
           userBonus.golden_glove.trim().toLowerCase() === adminBonus.golden_glove.trim().toLowerCase()) {
         bonusPoints += 40;
       }
@@ -392,6 +403,26 @@ app.post('/api/admin/bonus', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Bonus overrides (admin manually awards points) ──
+
+app.get('/api/admin/bonus-overrides/:userId', (req, res) => {
+  const rows = db.prepare('SELECT field, awarded FROM bonus_overrides WHERE user_id = ?').all(req.params.userId);
+  const result = {};
+  for (const r of rows) result[r.field] = !!r.awarded;
+  res.json(result);
+});
+
+app.post('/api/admin/bonus-overrides/:userId', (req, res) => {
+  const { field, awarded } = req.body;
+  const validFields = ['topScorer', 'firstRedCardNation', 'goldenGlove'];
+  if (!validFields.includes(field)) return res.status(400).json({ error: 'Invalid field' });
+  db.prepare(`
+    INSERT INTO bonus_overrides (user_id, field, awarded) VALUES (?, ?, ?)
+    ON CONFLICT(user_id, field) DO UPDATE SET awarded = excluded.awarded
+  `).run(parseInt(req.params.userId), field, awarded ? 1 : 0);
+  res.json({ ok: true });
+});
+
 // ── Lock / Settings ──
 
 app.get('/api/settings', (_req, res) => {
@@ -435,6 +466,13 @@ app.get('/api/users/:id/predictions', (req, res) => {
   const topScorer = db.prepare('SELECT player_name FROM top_scorer_predictions WHERE user_id = ?').get(userId);
   const bonus = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM bonus_predictions WHERE user_id = ?').get(userId);
 
+  // Include admin answers and overrides for admin view
+  const adminTopScorer = db.prepare('SELECT player_name FROM admin_top_scorer WHERE id = 1').get();
+  const adminBonus = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM admin_bonus WHERE id = 1').get();
+  const overrideRows = db.prepare('SELECT field, awarded FROM bonus_overrides WHERE user_id = ?').all(userId);
+  const overrides = {};
+  for (const r of overrideRows) overrides[r.field] = !!r.awarded;
+
   const groupMap = {};
   for (const r of groups) {
     if (!groupMap[r.group_name]) groupMap[r.group_name] = {};
@@ -451,6 +489,13 @@ app.get('/api/users/:id/predictions', (req, res) => {
     firstRedCardNation: bonus?.first_red_card_nation || '',
     goldenGlove: bonus?.golden_glove || '',
     tiebreaker: bonus?.tiebreaker ?? null,
+    adminAnswers: {
+      topScorer: adminTopScorer?.player_name || '',
+      firstRedCardNation: adminBonus?.first_red_card_nation || '',
+      goldenGlove: adminBonus?.golden_glove || '',
+      tiebreaker: adminBonus?.tiebreaker ?? null,
+    },
+    overrides,
   });
 });
 

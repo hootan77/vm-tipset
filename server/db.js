@@ -103,6 +103,17 @@ try { db.exec("ALTER TABLE users ADD COLUMN org TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE bonus_predictions ADD COLUMN tiebreaker INTEGER"); } catch(e) {}
 try { db.exec("ALTER TABLE admin_bonus ADD COLUMN tiebreaker INTEGER"); } catch(e) {}
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS bonus_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    field TEXT NOT NULL,
+    awarded INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, field)
+  );
+`);
+
 import bcrypt from 'bcryptjs';
 const adminExists = db.prepare('SELECT id FROM users WHERE is_admin = 1').get();
 if (!adminExists) {
