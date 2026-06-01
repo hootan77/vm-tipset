@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { API } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
-const ROLES = ['Spelare', 'Ledare', 'Förälder', 'Syskon'];
+const ROLES = ['Spelare', 'Ledare', 'Familj'];
 const ORGS = ['Enskede', 'QBank', 'Friends'];
 
 export default function UserManager({ onViewUser }) {

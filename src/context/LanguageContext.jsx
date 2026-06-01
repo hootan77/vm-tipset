@@ -212,8 +212,7 @@ const translations = {
     // Roles
     'role.spelare': 'Spelare',
     'role.ledare': 'Ledare',
-    'role.förälder': 'Förälder',
-    'role.syskon': 'Syskon',
+    'role.familj': 'Familj',
   },
   en: {
     // Header / Nav
@@ -424,8 +423,7 @@ const translations = {
     // Roles
     'role.spelare': 'Player',
     'role.ledare': 'Coach',
-    'role.förälder': 'Parent',
-    'role.syskon': 'Sibling',
+    'role.familj': 'Family',
   },
 };
 

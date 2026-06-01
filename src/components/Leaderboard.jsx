@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth, API } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
-const ROLE_KEYS = ['Alla', 'Spelare', 'Ledare', 'Förälder', 'Syskon'];
+const ROLE_KEYS = ['Alla', 'Spelare', 'Ledare', 'Familj'];
 
 export default function Leaderboard() {
   const { user } = useAuth();

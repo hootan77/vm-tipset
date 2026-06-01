@@ -45,7 +45,7 @@ app.get('/api/me/:id', (req, res) => {
 
 app.post('/api/users/:userId/role', (req, res) => {
   const { role } = req.body;
-  const validRoles = ['Spelare', 'Ledare', 'Förälder', 'Syskon'];
+  const validRoles = ['Spelare', 'Ledare', 'Familj'];
   if (!validRoles.includes(role)) return res.status(400).json({ error: 'Ogiltig roll' });
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, req.params.userId);
   res.json({ ok: true });
