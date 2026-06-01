@@ -250,9 +250,10 @@ app.get('/api/leaderboard', (_req, res) => {
 
     const userBracket = computeBracketFromData(userGroupRows, userKnockoutRows);
 
-    // Only award knockout team/bonus points if the user has filled in all 72 group matches
+    // Only award knockout team/bonus points if BOTH user has filled all 72 groups AND admin has group results
     const completedGroupPreds = userGroupRows.filter(p => p.home_goals != null && p.away_goals != null).length;
-    const allGroupsComplete = completedGroupPreds >= 72;
+    const completedAdminGroups = adminGroupRows.filter(p => p.home_goals != null && p.away_goals != null).length;
+    const allGroupsComplete = completedGroupPreds >= 72 && completedAdminGroups >= 72;
 
     if (allGroupsComplete) {
       const roundPointsMap = { r32: 5, r16: 5, qf: 5, sf: 10, final: 20 };
