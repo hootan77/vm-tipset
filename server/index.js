@@ -496,7 +496,7 @@ app.post('/api/users/:id/password', (req, res) => {
 app.get('/api/users/:id/predictions', (req, res) => {
   const userId = req.params.id;
   const groups = db.prepare('SELECT group_name, match_index, home_goals, away_goals FROM group_predictions WHERE user_id = ?').all(userId);
-  const knockout = db.prepare('SELECT match_id, home_goals, away_goals FROM knockout_predictions WHERE user_id = ?').all(userId);
+  const knockout = db.prepare('SELECT match_id, home_goals, away_goals, penalty_winner FROM knockout_predictions WHERE user_id = ?').all(userId);
   const topScorer = db.prepare('SELECT player_name FROM top_scorer_predictions WHERE user_id = ?').get(userId);
   const bonus = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM bonus_predictions WHERE user_id = ?').get(userId);
 
@@ -514,7 +514,7 @@ app.get('/api/users/:id/predictions', (req, res) => {
   }
   const knockoutMap = {};
   for (const r of knockout) {
-    knockoutMap[r.match_id] = { homeGoals: r.home_goals, awayGoals: r.away_goals };
+    knockoutMap[r.match_id] = { homeGoals: r.home_goals, awayGoals: r.away_goals, penaltyWinner: r.penalty_winner || null };
   }
   res.json({
     groups: groupMap,
