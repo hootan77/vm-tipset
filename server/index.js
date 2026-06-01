@@ -321,7 +321,14 @@ app.get('/api/leaderboard', (_req, res) => {
       ? Math.abs(userBonus.tiebreaker - adminBonus.tiebreaker)
       : null;
 
-    const totalPredictions = userGroupRows.filter(p => p.home_goals != null && p.away_goals != null).length;
+    const filledGroups = userGroupRows.filter(p => p.home_goals != null && p.away_goals != null).length;
+    const filledKnockout = userKnockoutRows.filter(p => p.home_goals != null && p.away_goals != null).length;
+    let filledBonus = 0;
+    if (userTopScorer?.player_name) filledBonus++;
+    if (userBonus?.first_red_card_nation) filledBonus++;
+    if (userBonus?.golden_glove) filledBonus++;
+    if (userBonus?.tiebreaker != null) filledBonus++;
+    const totalPredictions = filledGroups + filledKnockout + filledBonus;
 
     leaderboard.push({
       id: user.id,

@@ -114,7 +114,7 @@ export default function Leaderboard() {
                   <td className="py-3 px-4 text-center font-bold text-emerald-600 text-lg">{row.total}</td>
                   <td className="py-3 px-4 text-center text-gray-600">{row.exactResults}</td>
                   <td className="py-3 px-4 text-center text-gray-600">{row.correctOutcomes}</td>
-                  <td className="py-3 px-4 text-center text-gray-400">{row.totalPredictions}/72</td>
+                  <td className="py-3 px-4 text-center text-gray-400">{row.totalPredictions}/108</td>
                 </tr>
               ))}
             </tbody>
