@@ -189,23 +189,23 @@ function useRemainingPredictions() {
       }
     }
 
-    // Knockout matches: count from user bracket
-    let missingKnockout = 0;
+    // Knockout matches: 32 total (r32:16, r16:8, qf:4, sf:2, final:1, bronze:1)
+    const KNOCKOUT_TOTAL = { r32: 16, r16: 8, qf: 4, sf: 2, final: 1, bronze: 1 };
+    const roundLabels = { r32: '16-del', r16: 'Åttondel', qf: 'Kvart', sf: 'Semi', final: 'Final', bronze: 'Brons' };
+    let filledKnockout = 0;
     const missingRounds = [];
-    const bracket = computed.userBracket;
-    if (bracket) {
-      const rounds = ['r32', 'r16', 'qf', 'sf', 'final', 'bronze'];
-      const roundLabels = { r32: '16-del', r16: 'Åttondel', qf: 'Kvart', sf: 'Semi', final: 'Final', bronze: 'Brons' };
-      for (const round of rounds) {
-        if (!bracket[round]) continue;
-        for (const m of bracket[round]) {
-          if (m.home && m.away && (m.homeGoals == null || m.awayGoals == null)) {
-            missingKnockout++;
-            if (!missingRounds.includes(roundLabels[round])) missingRounds.push(roundLabels[round]);
-          }
+    const ko = state.knockoutPredictions;
+    for (const [round, expected] of Object.entries(KNOCKOUT_TOTAL)) {
+      let filledInRound = 0;
+      for (const [matchId, pred] of Object.entries(ko)) {
+        if (matchId.startsWith(round + '_') && pred.homeGoals != null && pred.awayGoals != null) {
+          filledInRound++;
         }
       }
+      filledKnockout += filledInRound;
+      if (filledInRound < expected) missingRounds.push(roundLabels[round]);
     }
+    const missingKnockout = 32 - filledKnockout;
 
     // Bonus questions: top scorer, red card, golden glove, tiebreaker
     let missingBonus = 0;
