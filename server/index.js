@@ -37,6 +37,12 @@ app.post('/api/login', (req, res) => {
   res.json({ id: user.id, name: user.display_name || user.name, isAdmin: !!user.is_admin, role: user.role || 'Spelare', org: user.org || null });
 });
 
+app.get('/api/me/:id', (req, res) => {
+  const user = db.prepare('SELECT id, name, display_name, is_admin, role, org FROM users WHERE id = ?').get(req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json({ id: user.id, name: user.display_name || user.name, isAdmin: !!user.is_admin, role: user.role || 'Spelare', org: user.org || null });
+});
+
 app.post('/api/users/:userId/role', (req, res) => {
   const { role } = req.body;
   const validRoles = ['Spelare', 'Ledare', 'Förälder', 'Syskon'];

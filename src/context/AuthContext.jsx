@@ -17,6 +17,17 @@ export function AuthProvider({ children }) {
     else localStorage.removeItem('vm-tipset-user');
   }, [user]);
 
+  // Refresh user data from server on mount to pick up org/role changes
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`${API}/me/${user.id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) setUser(prev => ({ ...prev, ...data }));
+      })
+      .catch(() => {});
+  }, []);
+
   async function login(name, password) {
     setError(null);
     const res = await fetch(`${API}/login`, {
