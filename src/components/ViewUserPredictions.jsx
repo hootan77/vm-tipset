@@ -3,7 +3,8 @@ import { API } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { TEAMS, GROUP_NAMES, getGroupMatchesForGroup } from '../data/teams';
 import { getFlag, getTeamName } from '../data/flags';
-import { calculateStandings, sortStandings } from '../logic/standings';
+import { calculateStandings, sortStandings, getBestThirdPlaced } from '../logic/standings';
+import { buildRoundOf32, buildFullBracket } from '../logic/knockout';
 
 export default function ViewUserPredictions({ viewUser, onBack }) {
   const { t } = useLanguage();
@@ -164,7 +165,7 @@ export default function ViewUserPredictions({ viewUser, onBack }) {
         })}
       </div>
 
-      <KnockoutSummary knockoutData={data.knockout} />
+      <KnockoutSummary groupMatches={groupMatches} knockoutData={data.knockout} />
     </div>
   );
 }
@@ -214,10 +215,35 @@ function ReadOnlyGroupCard({ group, matches, standings }) {
   );
 }
 
-function KnockoutSummary({ knockoutData }) {
-  const { t } = useLanguage();
-  const entries = Object.entries(knockoutData || {});
-  if (entries.length === 0) {
+function KnockoutSummary({ groupMatches, knockoutData }) {
+  const { t, lang } = useLanguage();
+
+  // Build the full bracket from user's group predictions + knockout predictions
+  const allStandings = {};
+  for (const group of GROUP_NAMES) {
+    const table = calculateStandings(TEAMS[group], groupMatches[group]);
+    allStandings[group] = sortStandings(table, groupMatches[group]);
+  }
+  const bestThirds = getBestThirdPlaced(allStandings);
+  const r32 = buildRoundOf32(allStandings, bestThirds);
+
+  const knockoutMap = {};
+  for (const [matchId, pred] of Object.entries(knockoutData || {})) {
+    knockoutMap[matchId] = { homeGoals: pred.homeGoals, awayGoals: pred.awayGoals, penaltyWinner: pred.penaltyWinner || null };
+  }
+  const bracket = buildFullBracket(r32, knockoutMap);
+
+  const roundOrder = ['r32', 'r16', 'qf', 'sf', 'bronze', 'final'];
+  const roundLabels = {
+    r32: t('ko.r32'), r16: t('ko.r16'), qf: t('ko.qf'),
+    sf: t('ko.sf'), bronze: t('ko.bronze'), final: t('ko.final'),
+  };
+
+  const hasAnyMatches = roundOrder.some(round =>
+    bracket[round]?.some(m => m.home || m.away)
+  );
+
+  if (!hasAnyMatches) {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center text-gray-500 text-sm">
         {t('vp.noKnockout')}
@@ -225,34 +251,38 @@ function KnockoutSummary({ knockoutData }) {
     );
   }
 
-  const rounds = { r32: [], r16: [], qf: [], sf: [], final: [], bronze: [] };
-  for (const [matchId, pred] of entries) {
-    const round = matchId.split('_')[0];
-    if (rounds[round]) {
-      rounds[round].push({ matchId, ...pred });
-    }
-  }
-
-  const roundLabels = {
-    r32: t('ko.r32'), r16: t('ko.r16'), qf: t('ko.qf'),
-    sf: t('ko.sf'), bronze: t('ko.bronze'), final: t('ko.final'),
-  };
-
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
       <div className="px-4 py-3 bg-gradient-to-r from-gray-500 to-gray-700">
         <h3 className="text-white font-bold text-lg">{t('vp.knockoutTitle')}</h3>
       </div>
-      <div className="p-4 space-y-3">
-        {Object.entries(rounds).map(([round, matches]) => {
-          if (matches.length === 0) return null;
+      <div className="p-4 space-y-4">
+        {roundOrder.map(round => {
+          const matches = bracket[round];
+          if (!matches || matches.length === 0) return null;
+          const hasData = matches.some(m => m.home || m.away);
+          if (!hasData) return null;
+
           return (
             <div key={round}>
-              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">{roundLabels[round]}</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
+              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{roundLabels[round]}</h4>
+              <div className="space-y-1">
                 {matches.map(m => (
-                  <div key={m.matchId} className="text-xs bg-gray-50 rounded px-2 py-1 text-center">
-                    {m.homeGoals ?? '-'} – {m.awayGoals ?? '-'}
+                  <div key={m.id} className="flex items-center gap-2 text-xs py-1.5 px-3 bg-gray-50 rounded-lg">
+                    <span className="flex-1 text-right truncate font-medium">
+                      {m.home ? `${getFlag(m.home)} ${getTeamName(m.home, lang)}` : '—'}
+                    </span>
+                    <span className={`font-bold px-2 min-w-[3rem] text-center ${m.homeGoals != null ? 'text-gray-800' : 'text-gray-300'}`}>
+                      {m.homeGoals ?? '-'} – {m.awayGoals ?? '-'}
+                    </span>
+                    <span className="flex-1 text-left truncate font-medium">
+                      {m.away ? `${getFlag(m.away)} ${getTeamName(m.away, lang)}` : '—'}
+                    </span>
+                    {m.penaltyWinner && (
+                      <span className="text-[10px] text-gray-400 ml-1">
+                        (pen: {getFlag(m.penaltyWinner)})
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
