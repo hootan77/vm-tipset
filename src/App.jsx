@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useAuth } from './context/AuthContext';
 import { useTournament } from './context/TournamentContext';
 import { useLanguage } from './context/LanguageContext';
+import { GROUP_NAMES } from './data/teams';
 import LoginPage from './components/LoginPage';
 import Header from './components/Header';
 import GroupStage from './components/GroupStage';
@@ -176,16 +177,108 @@ function ScoringRulesButton() {
   );
 }
 
+function useRemainingPredictions() {
+  const { state, computed } = useTournament();
+
+  return useMemo(() => {
+    // Group matches: 72 total
+    let missingGroups = 0;
+    for (const group of GROUP_NAMES) {
+      for (const m of state.groupMatches[group]) {
+        if (m.homeGoals == null || m.awayGoals == null) missingGroups++;
+      }
+    }
+
+    // Knockout matches: count from user bracket
+    let missingKnockout = 0;
+    const missingRounds = [];
+    const bracket = computed.userBracket;
+    if (bracket) {
+      const rounds = ['r32', 'r16', 'qf', 'sf', 'final', 'bronze'];
+      const roundLabels = { r32: '16-del', r16: 'Åttondel', qf: 'Kvart', sf: 'Semi', final: 'Final', bronze: 'Brons' };
+      for (const round of rounds) {
+        if (!bracket[round]) continue;
+        for (const m of bracket[round]) {
+          if (m.home && m.away && (m.homeGoals == null || m.awayGoals == null)) {
+            missingKnockout++;
+            if (!missingRounds.includes(roundLabels[round])) missingRounds.push(roundLabels[round]);
+          }
+        }
+      }
+    }
+
+    // Bonus questions: top scorer, red card, golden glove, tiebreaker
+    let missingBonus = 0;
+    const missingBonusNames = [];
+    if (!state.topScorer) { missingBonus++; missingBonusNames.push('Skyttekung'); }
+    if (!state.firstRedCardNation) { missingBonus++; missingBonusNames.push('Röda kort'); }
+    if (!state.goldenGlove) { missingBonus++; missingBonusNames.push('Golden Glove'); }
+    if (state.tiebreaker == null) { missingBonus++; missingBonusNames.push('Utslagsfråga'); }
+
+    const total = missingGroups + missingKnockout + missingBonus;
+    return { total, missingGroups, missingKnockout, missingBonus, missingRounds, missingBonusNames };
+  }, [state, computed]);
+}
+
+function PredictionProgress() {
+  const { t } = useLanguage();
+  const remaining = useRemainingPredictions();
+
+  if (remaining.total === 0) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+        <span className="text-2xl">✅</span>
+        <p className="font-semibold text-green-800">{t('predict.allDone')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-2xl">📝</span>
+        <p className="font-semibold text-amber-800">
+          {remaining.total} {t('predict.remaining')}
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-3 text-sm">
+        {remaining.missingGroups > 0 && (
+          <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg">
+            ⚽ {remaining.missingGroups} {t('predict.missingGroups')}
+          </span>
+        )}
+        {remaining.missingKnockout > 0 && (
+          <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg">
+            🏆 {remaining.missingKnockout} {t('predict.missingKnockout')}
+            {remaining.missingRounds.length > 0 && (
+              <span className="text-xs ml-1">({remaining.missingRounds.join(', ')})</span>
+            )}
+          </span>
+        )}
+        {remaining.missingBonus > 0 && (
+          <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg">
+            🎯 {remaining.missingBonus} {t('predict.missingBonus')}
+            {remaining.missingBonusNames.length > 0 && (
+              <span className="text-xs ml-1">({remaining.missingBonusNames.join(', ')})</span>
+            )}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function MainApp() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [view, setView] = useState('predict');
   const [viewUser, setViewUser] = useState(null);
+  const remaining = useRemainingPredictions();
 
   if (viewUser) {
     return (
       <div className="min-h-screen bg-gray-100">
-        <Header view={view} setView={(v) => { setViewUser(null); setView(v); }} />
+        <Header view={view} setView={(v) => { setViewUser(null); setView(v); }} remainingCount={remaining.total} />
         <main className="max-w-7xl mx-auto px-4 py-8">
           <ViewUserPredictions viewUser={viewUser} onBack={() => setViewUser(null)} />
         </main>
@@ -195,11 +288,12 @@ function MainApp() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header view={view} setView={setView} />
+      <Header view={view} setView={setView} remainingCount={remaining.total} />
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
         {view === 'predict' && (
           <>
             <LockBanner />
+            <PredictionProgress />
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold text-gray-800">{t('predict.groupTitle')}</h2>

@@ -23,7 +23,7 @@ function LanguageSwitcher() {
   );
 }
 
-export default function Header({ view, setView }) {
+export default function Header({ view, setView, remainingCount }) {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
 
@@ -40,7 +40,7 @@ export default function Header({ view, setView }) {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex gap-2 flex-wrap">
-              <NavButton active={view === 'predict'} onClick={() => setView('predict')}>
+              <NavButton active={view === 'predict'} onClick={() => setView('predict')} badge={remainingCount > 0 ? remainingCount : null}>
                 {t('nav.predict')}
               </NavButton>
               <NavButton active={view === 'leaderboard'} onClick={() => setView('leaderboard')}>
@@ -77,17 +77,22 @@ export default function Header({ view, setView }) {
   );
 }
 
-function NavButton({ active, onClick, children }) {
+function NavButton({ active, onClick, children, badge }) {
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+      className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
         active
           ? 'bg-white text-blue-900'
           : 'bg-white/10 text-white hover:bg-white/20'
       }`}
     >
       {children}
+      {badge != null && (
+        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1">
+          {badge}
+        </span>
+      )}
     </button>
   );
 }
