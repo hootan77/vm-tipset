@@ -151,6 +151,21 @@ const translations = {
     'admin.title': 'Admin — Verkliga resultat',
     'admin.subtitle': 'Fyll i de riktiga matchresultaten. Poäng beräknas automatiskt.',
 
+    // Data management
+    'dm.title': 'Datahantering',
+    'dm.subtitle': 'Visa och rensa facitdata',
+    'dm.knockoutResults': 'Slutspelsfacit',
+    'dm.groupResults': 'Gruppspelsfacit',
+    'dm.bonusResults': 'Bonusfacit',
+    'dm.clearAll': 'Rensa alla',
+    'dm.clearKnockout': 'Rensa slutspelsfacit',
+    'dm.clearGroups': 'Rensa gruppspelsfacit',
+    'dm.confirm': 'Är du säker? Detta går inte att ångra.',
+    'dm.cleared': 'Rensat!',
+    'dm.noData': 'Ingen data',
+    'dm.entries': 'poster',
+    'dm.delete': 'Ta bort',
+
     // User Manager
     'um.title': 'Användare',
     'um.subtitle': 'Hantera tippare, ändra roll/lösenord och se deras tips',
@@ -361,6 +376,21 @@ const translations = {
     // Admin
     'admin.title': 'Admin — Actual Results',
     'admin.subtitle': 'Enter the real match results. Points are calculated automatically.',
+
+    // Data management
+    'dm.title': 'Data Management',
+    'dm.subtitle': 'View and clear result data',
+    'dm.knockoutResults': 'Knockout Results',
+    'dm.groupResults': 'Group Results',
+    'dm.bonusResults': 'Bonus Results',
+    'dm.clearAll': 'Clear all',
+    'dm.clearKnockout': 'Clear knockout results',
+    'dm.clearGroups': 'Clear group results',
+    'dm.confirm': 'Are you sure? This cannot be undone.',
+    'dm.cleared': 'Cleared!',
+    'dm.noData': 'No data',
+    'dm.entries': 'entries',
+    'dm.delete': 'Delete',
 
     // User Manager
     'um.title': 'Users',

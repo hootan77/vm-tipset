@@ -409,6 +409,33 @@ app.post('/api/admin/bonus', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Admin data management ──
+
+app.get('/api/admin/knockout-results', (_req, res) => {
+  const rows = db.prepare('SELECT id, match_id, home_goals, away_goals, penalty_winner FROM admin_knockout_results ORDER BY match_id').all();
+  res.json(rows);
+});
+
+app.delete('/api/admin/knockout-results', (_req, res) => {
+  db.prepare('DELETE FROM admin_knockout_results').run();
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/knockout-results/:matchId', (req, res) => {
+  db.prepare('DELETE FROM admin_knockout_results WHERE match_id = ?').run(req.params.matchId);
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/group-results', (_req, res) => {
+  const rows = db.prepare('SELECT id, group_name, match_index, home_goals, away_goals FROM admin_group_results ORDER BY group_name, match_index').all();
+  res.json(rows);
+});
+
+app.delete('/api/admin/group-results', (_req, res) => {
+  db.prepare('DELETE FROM admin_group_results').run();
+  res.json({ ok: true });
+});
+
 // ── Bonus overrides (admin manually awards points) ──
 
 app.get('/api/admin/bonus-overrides/:userId', (req, res) => {

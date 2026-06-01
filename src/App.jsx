@@ -13,6 +13,7 @@ import FunFacts from './components/FunFacts';
 import WorldCupBalls from './components/WorldCupBalls';
 import UserManager from './components/UserManager';
 import ViewUserPredictions from './components/ViewUserPredictions';
+import AdminDataManager from './components/AdminDataManager';
 
 function BonusQuestions({ isAdmin }) {
   const { state, saveTopScorer, saveBonusField, locked } = useTournament();
@@ -235,6 +236,7 @@ function MainApp() {
             </section>
             <BonusQuestions isAdmin={true} />
             <UserManager onViewUser={setViewUser} />
+            <AdminDataManager />
             <section className="border-t pt-8">
               <Leaderboard />
             </section>
