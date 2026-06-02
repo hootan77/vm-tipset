@@ -82,7 +82,12 @@ export default function UserManager({ onViewUser }) {
           <tbody>
             {users.map(u => (
               <tr key={u.id} className="border-b last:border-0 hover:bg-gray-50">
-                <td className="py-3 px-4 font-semibold text-gray-800">{u.name}</td>
+                <td className="py-3 px-4">
+                  <div className="font-semibold text-gray-800">{u.name}</div>
+                  {u.username && u.username !== u.name && (
+                    <div className="text-xs text-gray-400">@{u.username}</div>
+                  )}
+                </td>
                 <td className="py-3 px-4">
                   {u.isAdmin ? (
                     <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">Admin</span>
