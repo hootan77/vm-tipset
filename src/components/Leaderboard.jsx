@@ -3,6 +3,7 @@ import { useAuth, API } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
 const ROLE_KEYS = ['Alla', 'Spelare', 'Ledare', 'Familj'];
+const ORG_KEYS = ['Alla', 'Enskede', 'QBank', 'Friends'];
 
 export default function Leaderboard() {
   const { user, refreshUser } = useAuth();
@@ -10,6 +11,7 @@ export default function Leaderboard() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState('Alla');
+  const [orgFilter, setOrgFilter] = useState('Alla');
 
   useEffect(() => {
     fetch(`${API}/leaderboard`)
@@ -31,12 +33,30 @@ export default function Leaderboard() {
     return t(`role.${role.toLowerCase()}`) || role;
   };
 
+  const isAdmin = !!user?.isAdmin;
   const userOrgs = user?.org ? user.org.split(',') : [];
-  const orgFiltered = userOrgs.length
-    ? data.filter(r => r.org && r.org.split(',').some(o => userOrgs.includes(o)))
-    : data.filter(r => r.id === user?.id);
-  const showRoleFilter = userOrgs.includes('Enskede');
-  const filtered = roleFilter === 'Alla' || !showRoleFilter ? orgFiltered : orgFiltered.filter(r => r.role === roleFilter);
+  const showRoleFilter = isAdmin || userOrgs.includes('Enskede');
+  const showOrgFilter = isAdmin;
+
+  // Filtering logic
+  let filtered = data;
+
+  if (isAdmin) {
+    // Admin: filter by selected org, then by role
+    if (orgFilter !== 'Alla') {
+      filtered = filtered.filter(r => r.org && r.org.split(',').includes(orgFilter));
+    }
+  } else if (userOrgs.length) {
+    // Regular user: only see people from same org(s)
+    filtered = filtered.filter(r => r.org && r.org.split(',').some(o => userOrgs.includes(o)));
+  } else {
+    // No org: only see yourself
+    filtered = filtered.filter(r => r.id === user?.id);
+  }
+
+  if (roleFilter !== 'Alla' && showRoleFilter) {
+    filtered = filtered.filter(r => r.role === roleFilter);
+  }
 
   if (loading) {
     return (
@@ -61,22 +81,44 @@ export default function Leaderboard() {
         </button>
       </div>
 
-      {showRoleFilter && (
-        <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('lb.filter')}</span>
-          {ROLE_KEYS.map(r => (
-            <button
-              key={r}
-              onClick={() => setRoleFilter(r)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                roleFilter === r
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
-              }`}
-            >
-              {roleLabel(r)}
-            </button>
-          ))}
+      {(showOrgFilter || showRoleFilter) && (
+        <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-4 flex-wrap">
+          {showOrgFilter && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('um.org')}:</span>
+              {ORG_KEYS.map(o => (
+                <button
+                  key={o}
+                  onClick={() => setOrgFilter(o)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    orgFilter === o
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+                  }`}
+                >
+                  {o === 'Alla' ? t('lb.all') : o}
+                </button>
+              ))}
+            </div>
+          )}
+          {showRoleFilter && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('lb.filter')}</span>
+              {ROLE_KEYS.map(r => (
+                <button
+                  key={r}
+                  onClick={() => setRoleFilter(r)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    roleFilter === r
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+                  }`}
+                >
+                  {roleLabel(r)}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
