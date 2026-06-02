@@ -33,7 +33,7 @@ export default function Leaderboard() {
   const userOrgs = user?.org ? user.org.split(',') : [];
   const orgFiltered = userOrgs.length
     ? data.filter(r => r.org && r.org.split(',').some(o => userOrgs.includes(o)))
-    : data;
+    : data.filter(r => r.id === user?.id);
   const showRoleFilter = userOrgs.includes('Enskede');
   const filtered = roleFilter === 'Alla' || !showRoleFilter ? orgFiltered : orgFiltered.filter(r => r.role === roleFilter);
 
