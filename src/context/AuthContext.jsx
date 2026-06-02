@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const AuthContext = createContext();
 const API = import.meta.env.DEV ? 'http://localhost:3456/api' : '/api';
@@ -54,13 +54,24 @@ export function AuthProvider({ children }) {
     return true;
   }
 
+  const refreshUser = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch(`${API}/me/${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setUser(prev => ({ ...prev, ...data }));
+      }
+    } catch {}
+  }, [user?.id]);
+
   function logout() {
     setUser(null);
     localStorage.removeItem('vm-tipset-state');
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, error, setError }}>
+    <AuthContext.Provider value={{ user, login, register, logout, refreshUser, error, setError }}>
       {children}
     </AuthContext.Provider>
   );

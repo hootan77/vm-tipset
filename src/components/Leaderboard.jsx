@@ -5,7 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 const ROLE_KEYS = ['Alla', 'Spelare', 'Ledare', 'Familj'];
 
 export default function Leaderboard() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { t } = useLanguage();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +20,7 @@ export default function Leaderboard() {
 
   function refresh() {
     setLoading(true);
+    refreshUser();
     fetch(`${API}/leaderboard`)
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); });
