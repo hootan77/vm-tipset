@@ -3,7 +3,7 @@ import { useAuth, API } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
 const ROLE_KEYS = ['Alla', 'Spelare', 'Ledare', 'Familj'];
-const ORG_KEYS = ['Alla', 'Enskede', 'QBank', 'Friends'];
+const ORG_KEYS = ['Alla', 'Enskede', 'QBank', 'Friends', 'MNO'];
 
 export default function Leaderboard() {
   const { user, refreshUser } = useAuth();

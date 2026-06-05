@@ -53,7 +53,7 @@ app.post('/api/users/:userId/role', (req, res) => {
 
 app.post('/api/users/:userId/org', (req, res) => {
   const { orgs } = req.body;
-  const validOrgs = ['Enskede', 'QBank', 'Friends'];
+  const validOrgs = ['Enskede', 'QBank', 'Friends', 'MNO'];
   if (!Array.isArray(orgs) || !orgs.every(o => validOrgs.includes(o))) {
     return res.status(400).json({ error: 'Ogiltig organisation' });
   }

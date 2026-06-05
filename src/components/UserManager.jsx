@@ -3,7 +3,7 @@ import { API } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
 const ROLES = ['Spelare', 'Ledare', 'Familj'];
-const ORGS = ['Enskede', 'QBank', 'Friends'];
+const ORGS = ['Enskede', 'QBank', 'Friends', 'MNO'];
 
 export default function UserManager({ onViewUser }) {
   const { t } = useLanguage();
