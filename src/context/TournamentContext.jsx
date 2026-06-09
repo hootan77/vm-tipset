@@ -112,10 +112,12 @@ export function TournamentProvider({ children }) {
   const [locked, setLocked] = useState(false);
 
   useEffect(() => {
-    fetch(`${API}/settings`).then(r => r.json()).then(d => {
-      const timeLocked = Date.now() >= LOCK_DATE.getTime();
-      setLocked(d.locked || timeLocked);
-    });
+    function checkLock() {
+      fetch(`${API}/settings`).then(r => r.json()).then(d => setLocked(d.locked));
+    }
+    checkLock();
+    const interval = setInterval(checkLock, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {

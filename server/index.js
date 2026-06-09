@@ -11,6 +11,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const LOCK_DATE = new Date('2026-06-11T18:00:00Z');
+
+function isTournamentLocked() {
+  if (Date.now() >= LOCK_DATE.getTime()) return true;
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'locked'").get();
+  return row?.value === '1';
+}
+
 // ── Auth ──
 
 app.post('/api/register', (req, res) => {
@@ -76,6 +84,7 @@ app.get('/api/predictions/:userId/groups', (req, res) => {
 });
 
 app.post('/api/predictions/:userId/groups', (req, res) => {
+  if (isTournamentLocked()) return res.status(403).json({ error: 'Tippningen är låst' });
   const { group, matchIndex, homeGoals, awayGoals } = req.body;
   const userId = parseInt(req.params.userId);
   const hg = homeGoals === null || homeGoals === '' ? null : parseInt(homeGoals);
@@ -104,6 +113,7 @@ app.get('/api/predictions/:userId/knockout', (req, res) => {
 });
 
 app.post('/api/predictions/:userId/knockout', (req, res) => {
+  if (isTournamentLocked()) return res.status(403).json({ error: 'Tippningen är låst' });
   const { matchId, homeGoals, awayGoals, penaltyWinner } = req.body;
   const userId = parseInt(req.params.userId);
   const hg = homeGoals === null || homeGoals === '' ? null : parseInt(homeGoals);
@@ -365,6 +375,7 @@ app.get('/api/predictions/:userId/top-scorer', (req, res) => {
 });
 
 app.post('/api/predictions/:userId/top-scorer', (req, res) => {
+  if (isTournamentLocked()) return res.status(403).json({ error: 'Tippningen är låst' });
   const { playerName } = req.body;
   db.prepare(`
     INSERT INTO top_scorer_predictions (user_id, player_name) VALUES (?, ?)
@@ -395,6 +406,7 @@ app.get('/api/predictions/:userId/bonus', (req, res) => {
 });
 
 app.post('/api/predictions/:userId/bonus', (req, res) => {
+  if (isTournamentLocked()) return res.status(403).json({ error: 'Tippningen är låst' });
   const { firstRedCardNation, goldenGlove, tiebreaker } = req.body;
   db.prepare(`
     INSERT INTO bonus_predictions (user_id, first_red_card_nation, golden_glove, tiebreaker) VALUES (?, ?, ?, ?)
@@ -504,8 +516,7 @@ app.get('/api/admin/all-bonus', (_req, res) => {
 // ── Lock / Settings ──
 
 app.get('/api/settings', (_req, res) => {
-  const row = db.prepare("SELECT value FROM settings WHERE key = 'locked'").get();
-  res.json({ locked: row?.value === '1' });
+  res.json({ locked: isTournamentLocked() });
 });
 
 app.post('/api/admin/lock', (req, res) => {
