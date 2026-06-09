@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth, API } from '../context/AuthContext';
+import { useTournament } from '../context/TournamentContext';
 import { useLanguage } from '../context/LanguageContext';
 
 const ROLE_KEYS = ['Alla', 'Spelare', 'Ledare', 'Familj'];
 const ORG_KEYS = ['Alla', 'Enskede', 'QBank', 'Friends', 'MNO'];
 
-export default function Leaderboard() {
+export default function Leaderboard({ onViewUser }) {
   const { user, refreshUser } = useAuth();
+  const { locked } = useTournament();
   const { t } = useLanguage();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,20 +39,18 @@ export default function Leaderboard() {
   const userOrgs = user?.org ? user.org.split(',') : [];
   const showRoleFilter = isAdmin || userOrgs.includes('Enskede');
   const showOrgFilter = isAdmin;
+  const showViewButton = locked || isAdmin;
 
   // Filtering logic
   let filtered = data;
 
   if (isAdmin) {
-    // Admin: filter by selected org, then by role
     if (orgFilter !== 'Alla') {
       filtered = filtered.filter(r => r.org && r.org.split(',').includes(orgFilter));
     }
   } else if (userOrgs.length) {
-    // Regular user: only see people from same org(s)
     filtered = filtered.filter(r => r.org && r.org.split(',').some(o => userOrgs.includes(o)));
   } else {
-    // No org: only see yourself
     filtered = filtered.filter(r => r.id === user?.id);
   }
 
@@ -141,6 +141,9 @@ export default function Leaderboard() {
                 <th className="text-center py-3 px-4">{t('lb.col.exact')}</th>
                 <th className="text-center py-3 px-4">{t('lb.col.outcome')}</th>
                 <th className="text-center py-3 px-4">{t('lb.col.tips')}</th>
+                {showViewButton && onViewUser && (
+                  <th className="text-center py-3 px-4"></th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -158,6 +161,16 @@ export default function Leaderboard() {
                   <td className="py-3 px-4 text-center text-gray-600">{row.exactResults}</td>
                   <td className="py-3 px-4 text-center text-gray-600">{row.correctOutcomes}</td>
                   <td className="py-3 px-4 text-center text-gray-400">{row.totalPredictions}/108</td>
+                  {showViewButton && onViewUser && (
+                    <td className="py-3 px-4 text-center">
+                      <button
+                        onClick={() => onViewUser({ id: row.id, name: row.name })}
+                        className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs hover:bg-blue-100 transition-colors"
+                      >
+                        {t('um.view')}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

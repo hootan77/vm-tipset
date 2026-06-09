@@ -464,6 +464,43 @@ app.post('/api/admin/bonus-overrides/:userId', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Admin: all bonus answers overview ──
+
+app.get('/api/admin/all-bonus', (_req, res) => {
+  const users = db.prepare("SELECT id, name, display_name FROM users WHERE is_admin = 0").all();
+  const adminTopScorer = db.prepare('SELECT player_name FROM admin_top_scorer WHERE id = 1').get();
+  const adminBonus = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM admin_bonus WHERE id = 1').get();
+
+  const result = [];
+  for (const user of users) {
+    const ts = db.prepare('SELECT player_name FROM top_scorer_predictions WHERE user_id = ?').get(user.id);
+    const bonus = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM bonus_predictions WHERE user_id = ?').get(user.id);
+    const overrideRows = db.prepare('SELECT field, awarded FROM bonus_overrides WHERE user_id = ?').all(user.id);
+    const overrides = {};
+    for (const r of overrideRows) overrides[r.field] = !!r.awarded;
+
+    result.push({
+      id: user.id,
+      name: user.display_name || user.name,
+      topScorer: ts?.player_name || '',
+      firstRedCardNation: bonus?.first_red_card_nation || '',
+      goldenGlove: bonus?.golden_glove || '',
+      tiebreaker: bonus?.tiebreaker ?? null,
+      overrides,
+    });
+  }
+
+  res.json({
+    users: result,
+    admin: {
+      topScorer: adminTopScorer?.player_name || '',
+      firstRedCardNation: adminBonus?.first_red_card_nation || '',
+      goldenGlove: adminBonus?.golden_glove || '',
+      tiebreaker: adminBonus?.tiebreaker ?? null,
+    },
+  });
+});
+
 // ── Lock / Settings ──
 
 app.get('/api/settings', (_req, res) => {

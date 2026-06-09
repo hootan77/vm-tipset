@@ -15,6 +15,7 @@ import WorldCupBalls from './components/WorldCupBalls';
 import UserManager from './components/UserManager';
 import ViewUserPredictions from './components/ViewUserPredictions';
 import AdminDataManager from './components/AdminDataManager';
+import AdminBonusOverview from './components/AdminBonusOverview';
 
 function BonusQuestions({ isAdmin }) {
   const { state, saveTopScorer, saveBonusField, locked } = useTournament();
@@ -309,7 +310,7 @@ function MainApp() {
           </>
         )}
 
-        {view === 'leaderboard' && <Leaderboard />}
+        {view === 'leaderboard' && <Leaderboard onViewUser={setViewUser} />}
         {view === 'venues' && <Venues />}
         {view === 'funfacts' && <FunFacts />}
         {view === 'balls' && <WorldCupBalls />}
@@ -330,9 +331,10 @@ function MainApp() {
             </section>
             <BonusQuestions isAdmin={true} />
             <UserManager onViewUser={setViewUser} />
+            <AdminBonusOverview />
             <AdminDataManager />
             <section className="border-t pt-8">
-              <Leaderboard />
+              <Leaderboard onViewUser={setViewUser} />
             </section>
           </>
         )}
