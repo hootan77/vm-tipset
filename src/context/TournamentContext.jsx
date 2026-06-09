@@ -4,7 +4,7 @@ import { calculateStandings, sortStandings, getBestThirdPlaced } from '../logic/
 import { buildRoundOf32, buildFullBracket } from '../logic/knockout';
 import { useAuth, API } from './AuthContext';
 
-const LOCK_DATE = new Date('2026-06-11T07:00:00Z');
+const LOCK_DATE = new Date('2026-06-11T18:00:00Z');
 
 const TournamentContext = createContext();
 
