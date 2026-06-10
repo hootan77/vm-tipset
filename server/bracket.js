@@ -1,4 +1,5 @@
 import { TEAMS, GROUP_NAMES, GROUP_SCHEDULE, ROUND_OF_32_BRACKET } from './teams-data.js';
+import { THIRD_PLACE_TABLE, THIRD_PLACE_WINNER_ORDER } from './third-place-table.js';
 export { TEAMS, GROUP_NAMES, GROUP_SCHEDULE, ROUND_OF_32_BRACKET };
 
 export function calculateStandings(teams, matches) {
@@ -67,52 +68,27 @@ export function getBestThirdPlaced(allGroupStandings) {
 
   const qualified = thirds.slice(0, 8);
 
-  // Official FIFA 2026 R32 allowed groups per best-third slot:
-  // Slot 1 (vs E1, M74): 3rd from A/B/C/D/F
-  // Slot 2 (vs I1, M77): 3rd from C/D/F/G/H
-  // Slot 3 (vs A1, M79): 3rd from C/E/F/H/I
-  // Slot 4 (vs L1, M80): 3rd from E/H/I/J/K
-  // Slot 5 (vs D1, M81): 3rd from B/E/F/I/J
-  // Slot 6 (vs G1, M82): 3rd from A/E/H/I/J
-  // Slot 7 (vs B1, M85): 3rd from E/F/G/I/J
-  // Slot 8 (vs K1, M87): 3rd from D/E/I/J/L
-  const SLOT_ALLOWED_GROUPS = [
-    ['A','B','C','D','F'],
-    ['C','D','F','G','H'],
-    ['C','E','F','H','I'],
-    ['E','H','I','J','K'],
-    ['B','E','F','I','J'],
-    ['A','E','H','I','J'],
-    ['E','F','G','I','J'],
-    ['D','E','I','J','L'],
-  ];
-
-  return assignThirdsToSlots(qualified, SLOT_ALLOWED_GROUPS);
+  return assignThirdsToSlots(qualified);
 }
 
-function assignThirdsToSlots(rankedThirds, slotAllowedGroups) {
-  const n = slotAllowedGroups.length;
-  const result = new Array(n).fill(null);
+// best3 slot index (0..7, referenced by ROUND_OF_32_BRACKET) -> the first-place group it faces
+const WINNER_BY_SLOT = ['E', 'I', 'A', 'L', 'D', 'G', 'B', 'K'];
 
-  function backtrack(slot, used) {
-    if (slot === n) return true;
-    const allowed = slotAllowedGroups[slot];
-    for (let i = 0; i < rankedThirds.length; i++) {
-      if (!used.has(i) && allowed.includes(rankedThirds[i].group)) {
-        result[slot] = rankedThirds[i];
-        used.add(i);
-        if (backtrack(slot + 1, used)) return true;
-        used.delete(i);
-      }
-    }
-    return false;
-  }
+function assignThirdsToSlots(rankedThirds) {
+  // Need exactly 8 qualifying thirds to use the official allocation table.
+  if (rankedThirds.length < 8) return rankedThirds;
 
-  if (!backtrack(0, new Set())) {
-    return rankedThirds.slice(0, n);
-  }
+  const key = rankedThirds.map(t => t.group).sort().join('');
+  const assignment = THIRD_PLACE_TABLE[key];
+  if (!assignment) return rankedThirds;
 
-  return result;
+  const winnerToGroup = {};
+  THIRD_PLACE_WINNER_ORDER.forEach((w, i) => { winnerToGroup[w] = assignment[i]; });
+
+  const byGroup = {};
+  for (const t of rankedThirds) byGroup[t.group] = t;
+
+  return WINNER_BY_SLOT.map(winner => byGroup[winnerToGroup[winner]] || null);
 }
 
 function resolveSlot(slot, allGroupStandings, bestThirds) {
