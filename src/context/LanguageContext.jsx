@@ -206,6 +206,20 @@ const translations = {
     'bo.userAnswer': 'Svar:',
     'bo.noAnswer': 'Inget svar',
 
+    // Prediction statistics (admin)
+    'ps.title': 'Tippningsstatistik',
+    'ps.subtitle': 'Vad spelarna har tippat — uppdelat per organisation',
+    'ps.champion': 'Världsmästare',
+    'ps.finalists': 'Finalister',
+    'ps.bronze': 'Bronsvinnare',
+    'ps.topScorer': 'Skyttekung',
+    'ps.firstRedCard': 'Första röda kortet',
+    'ps.goldenGlove': 'Golden Glove',
+    'ps.votes': 'röster',
+    'ps.players': 'spelare',
+    'ps.noData': 'Ingen data ännu',
+    'ps.incompleteNote': 'Endast spelare som fyllt i alla gruppspelsmatcher räknas för bracket-statistik.',
+
     // Venues
     'venues.title': 'VM Arenor 2026',
     'venues.subtitle': '{count} arenor i 3 länder — total kapacitet {capacity} platser',
@@ -437,6 +451,20 @@ const translations = {
     'bo.adminAnswer': 'Correct:',
     'bo.userAnswer': 'Answer:',
     'bo.noAnswer': 'No answer',
+
+    // Prediction statistics (admin)
+    'ps.title': 'Prediction statistics',
+    'ps.subtitle': 'What players predicted — broken down by organisation',
+    'ps.champion': 'World champion',
+    'ps.finalists': 'Finalists',
+    'ps.bronze': 'Bronze winner',
+    'ps.topScorer': 'Top scorer',
+    'ps.firstRedCard': 'First red card',
+    'ps.goldenGlove': 'Golden Glove',
+    'ps.votes': 'votes',
+    'ps.players': 'players',
+    'ps.noData': 'No data yet',
+    'ps.incompleteNote': 'Only players who filled in all group matches are counted for bracket statistics.',
 
     // Venues
     'venues.title': 'WC Venues 2026',

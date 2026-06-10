@@ -513,6 +513,51 @@ app.get('/api/admin/all-bonus', (_req, res) => {
   });
 });
 
+// ── Admin: prediction statistics (champion / finalists / bonus per org) ──
+
+app.get('/api/admin/prediction-stats', (_req, res) => {
+  const users = db.prepare("SELECT id, name, display_name, org FROM users WHERE is_admin = 0").all();
+
+  const records = [];
+  for (const user of users) {
+    const groupRows = db.prepare('SELECT group_name, match_index, home_goals, away_goals FROM group_predictions WHERE user_id = ?').all(user.id);
+    const knockoutRows = db.prepare('SELECT match_id, home_goals, away_goals, penalty_winner FROM knockout_predictions WHERE user_id = ?').all(user.id);
+    const ts = db.prepare('SELECT player_name FROM top_scorer_predictions WHERE user_id = ?').get(user.id);
+    const bonus = db.prepare('SELECT first_red_card_nation, golden_glove FROM bonus_predictions WHERE user_id = ?').get(user.id);
+
+    // Only compute champion/finalists if the user filled all 72 group matches (bracket fully resolves)
+    const completedGroups = groupRows.filter(p => p.home_goals != null && p.away_goals != null).length;
+    let champion = null;
+    let finalists = [];
+    let bronzeWinner = null;
+    if (completedGroups >= 72) {
+      const bracket = computeBracketFromData(groupRows, knockoutRows);
+      const finalMatch = bracket.final?.[0];
+      if (finalMatch) {
+        if (finalMatch.home) finalists.push(finalMatch.home);
+        if (finalMatch.away) finalists.push(finalMatch.away);
+        champion = getMatchWinner(finalMatch);
+      }
+      const bronzeMatch = bracket.bronze?.[0];
+      if (bronzeMatch) bronzeWinner = getMatchWinner(bronzeMatch);
+    }
+
+    records.push({
+      id: user.id,
+      name: user.display_name || user.name,
+      org: user.org || null,
+      champion,
+      finalists,
+      bronzeWinner,
+      topScorer: ts?.player_name || '',
+      firstRedCardNation: bonus?.first_red_card_nation || '',
+      goldenGlove: bonus?.golden_glove || '',
+    });
+  }
+
+  res.json({ records });
+});
+
 // ── Lock / Settings ──
 
 app.get('/api/settings', (_req, res) => {

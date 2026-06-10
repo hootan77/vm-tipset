@@ -16,6 +16,7 @@ import UserManager from './components/UserManager';
 import ViewUserPredictions from './components/ViewUserPredictions';
 import AdminDataManager from './components/AdminDataManager';
 import AdminBonusOverview from './components/AdminBonusOverview';
+import AdminPredictionStats from './components/AdminPredictionStats';
 
 function BonusQuestions({ isAdmin }) {
   const { state, saveTopScorer, saveBonusField, locked } = useTournament();
@@ -330,6 +331,7 @@ function MainApp() {
               <KnockoutBracket isAdmin={true} />
             </section>
             <BonusQuestions isAdmin={true} />
+            <AdminPredictionStats />
             <UserManager onViewUser={setViewUser} />
             <AdminBonusOverview />
             <AdminDataManager />
