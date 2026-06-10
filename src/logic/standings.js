@@ -104,22 +104,38 @@ export function getBestThirdPlaced(allGroupStandings) {
 
   const qualified = thirds.slice(0, 8);
 
-  // Each slot faces a specific group winner — a third from that group must not be placed there
-  // Slot 0→E1, 1→I1, 2→A1, 3→L1, 4→D1, 5→G1, 6→B1, 7→K1
-  const SLOT_BLOCKED_GROUP = ['E', 'I', 'A', 'L', 'D', 'G', 'B', 'K'];
+  // Official FIFA 2026 R32 allowed groups per best-third slot:
+  // Slot 1 (vs E1, M74): 3rd from A/B/C/D/F
+  // Slot 2 (vs I1, M77): 3rd from C/D/F/G/H
+  // Slot 3 (vs A1, M79): 3rd from C/E/F/H/I
+  // Slot 4 (vs L1, M80): 3rd from E/H/I/J/K
+  // Slot 5 (vs D1, M81): 3rd from B/E/F/I/J
+  // Slot 6 (vs G1, M82): 3rd from A/E/H/I/J
+  // Slot 7 (vs B1, M85): 3rd from E/F/G/I/J
+  // Slot 8 (vs K1, M87): 3rd from D/E/I/J/L
+  const SLOT_ALLOWED_GROUPS = [
+    ['A','B','C','D','F'],
+    ['C','D','F','G','H'],
+    ['C','E','F','H','I'],
+    ['E','H','I','J','K'],
+    ['B','E','F','I','J'],
+    ['A','E','H','I','J'],
+    ['E','F','G','I','J'],
+    ['D','E','I','J','L'],
+  ];
 
-  return assignThirdsToSlots(qualified, SLOT_BLOCKED_GROUP);
+  return assignThirdsToSlots(qualified, SLOT_ALLOWED_GROUPS);
 }
 
-function assignThirdsToSlots(rankedThirds, slotBlockedGroup) {
-  const n = slotBlockedGroup.length;
+function assignThirdsToSlots(rankedThirds, slotAllowedGroups) {
+  const n = slotAllowedGroups.length;
   const result = new Array(n).fill(null);
 
   function backtrack(slot, used) {
     if (slot === n) return true;
-    const blocked = slotBlockedGroup[slot];
+    const allowed = slotAllowedGroups[slot];
     for (let i = 0; i < rankedThirds.length; i++) {
-      if (!used.has(i) && rankedThirds[i].group !== blocked) {
+      if (!used.has(i) && allowed.includes(rankedThirds[i].group)) {
         result[slot] = rankedThirds[i];
         used.add(i);
         if (backtrack(slot + 1, used)) return true;
