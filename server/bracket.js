@@ -64,7 +64,39 @@ export function getBestThirdPlaced(allGroupStandings) {
     if (b.gf !== a.gf) return b.gf - a.gf;
     return a.team.localeCompare(b.team);
   });
-  return thirds.slice(0, 8);
+
+  const qualified = thirds.slice(0, 8);
+
+  // Each slot faces a specific group winner — a third from that group must not be placed there
+  // Slot 0→E1, 1→I1, 2→A1, 3→L1, 4→D1, 5→G1, 6→B1, 7→K1
+  const SLOT_BLOCKED_GROUP = ['E', 'I', 'A', 'L', 'D', 'G', 'B', 'K'];
+
+  return assignThirdsToSlots(qualified, SLOT_BLOCKED_GROUP);
+}
+
+function assignThirdsToSlots(rankedThirds, slotBlockedGroup) {
+  const n = slotBlockedGroup.length;
+  const result = new Array(n).fill(null);
+
+  function backtrack(slot, used) {
+    if (slot === n) return true;
+    const blocked = slotBlockedGroup[slot];
+    for (let i = 0; i < rankedThirds.length; i++) {
+      if (!used.has(i) && rankedThirds[i].group !== blocked) {
+        result[slot] = rankedThirds[i];
+        used.add(i);
+        if (backtrack(slot + 1, used)) return true;
+        used.delete(i);
+      }
+    }
+    return false;
+  }
+
+  if (!backtrack(0, new Set())) {
+    return rankedThirds.slice(0, n);
+  }
+
+  return result;
 }
 
 function resolveSlot(slot, allGroupStandings, bestThirds) {
