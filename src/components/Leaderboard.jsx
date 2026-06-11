@@ -37,8 +37,11 @@ export default function Leaderboard({ onViewUser }) {
 
   const isAdmin = !!user?.isAdmin;
   const userOrgs = user?.org ? user.org.split(',') : [];
+  const isMultiOrg = userOrgs.length > 1;
   const showRoleFilter = isAdmin || userOrgs.includes('Enskede');
-  const showOrgFilter = isAdmin;
+  const showOrgFilter = isAdmin || isMultiOrg;
+  // Admin can filter on all orgs; a multi-org player only on their own orgs
+  const orgOptions = isAdmin ? ORG_KEYS : ['Alla', ...userOrgs];
   const showViewButton = locked || isAdmin;
 
   // Filtering logic
@@ -49,7 +52,9 @@ export default function Leaderboard({ onViewUser }) {
       filtered = filtered.filter(r => r.org && r.org.split(',').includes(orgFilter));
     }
   } else if (userOrgs.length) {
-    filtered = filtered.filter(r => r.org && r.org.split(',').some(o => userOrgs.includes(o)));
+    // Restrict to the player's own orgs, optionally narrowed to one selected org
+    const orgsToShow = orgFilter !== 'Alla' && userOrgs.includes(orgFilter) ? [orgFilter] : userOrgs;
+    filtered = filtered.filter(r => r.org && r.org.split(',').some(o => orgsToShow.includes(o)));
   } else {
     filtered = filtered.filter(r => r.id === user?.id);
   }
@@ -86,7 +91,7 @@ export default function Leaderboard({ onViewUser }) {
           {showOrgFilter && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('um.org')}:</span>
-              {ORG_KEYS.map(o => (
+              {orgOptions.map(o => (
                 <button
                   key={o}
                   onClick={() => setOrgFilter(o)}
