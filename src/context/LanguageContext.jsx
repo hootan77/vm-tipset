@@ -185,6 +185,14 @@ const translations = {
     'um.minChars': 'Minst 4 tecken',
     'um.saved': 'Sparat!',
     'um.view': 'Visa',
+    'um.delete': 'Ta bort',
+    'um.restore': 'Återställ',
+    'um.deleted': 'Borttagen',
+    'um.confirmDelete': 'Är du säker på att du vill ta bort {name}? Användaren kan återställas senare.',
+    'um.confirmRestore': 'Vill du återställa {name}?',
+    'um.showDeleted': 'Visa borttagna',
+    'um.hideDeleted': 'Dölj borttagna',
+    'um.actions': 'Åtgärder',
 
     // View user predictions
     'vp.back': 'Tillbaka',
@@ -431,6 +439,14 @@ const translations = {
     'um.minChars': 'Min 4 characters',
     'um.saved': 'Saved!',
     'um.view': 'View',
+    'um.delete': 'Delete',
+    'um.restore': 'Restore',
+    'um.deleted': 'Deleted',
+    'um.confirmDelete': 'Are you sure you want to delete {name}? The user can be restored later.',
+    'um.confirmRestore': 'Restore {name}?',
+    'um.showDeleted': 'Show deleted',
+    'um.hideDeleted': 'Hide deleted',
+    'um.actions': 'Actions',
 
     // View user predictions
     'vp.back': 'Back',

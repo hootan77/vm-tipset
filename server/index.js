@@ -39,7 +39,7 @@ app.post('/api/register', (req, res) => {
 app.post('/api/login', (req, res) => {
   const { name, password } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE username = ? OR name = ?').get(name, name);
-  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+  if (!user || user.deleted_at || !bcrypt.compareSync(password, user.password_hash)) {
     return res.status(401).json({ error: 'Fel användarnamn eller lösenord' });
   }
   res.json({ id: user.id, name: user.display_name || user.name, isAdmin: !!user.is_admin, role: user.role || 'Spelare', org: user.org || null });
@@ -193,7 +193,7 @@ function getTeamsInRound(bracket, round) {
 }
 
 app.get('/api/leaderboard', (_req, res) => {
-  const users = db.prepare("SELECT id, name, display_name, role, org FROM users WHERE is_admin = 0").all();
+  const users = db.prepare("SELECT id, name, display_name, role, org FROM users WHERE is_admin = 0 AND deleted_at IS NULL").all();
   const adminGroupRows = db.prepare('SELECT group_name, match_index, home_goals, away_goals FROM admin_group_results').all();
   const adminKnockoutRows = db.prepare('SELECT match_id, home_goals, away_goals, penalty_winner FROM admin_knockout_results').all();
 
@@ -479,7 +479,7 @@ app.post('/api/admin/bonus-overrides/:userId', (req, res) => {
 // ── Admin: all bonus answers overview ──
 
 app.get('/api/admin/all-bonus', (_req, res) => {
-  const users = db.prepare("SELECT id, name, display_name FROM users WHERE is_admin = 0").all();
+  const users = db.prepare("SELECT id, name, display_name FROM users WHERE is_admin = 0 AND deleted_at IS NULL").all();
   const adminTopScorer = db.prepare('SELECT player_name FROM admin_top_scorer WHERE id = 1').get();
   const adminBonus = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM admin_bonus WHERE id = 1').get();
 
@@ -516,7 +516,7 @@ app.get('/api/admin/all-bonus', (_req, res) => {
 // ── Admin: prediction statistics (champion / finalists / bonus per org) ──
 
 app.get('/api/admin/prediction-stats', (_req, res) => {
-  const users = db.prepare("SELECT id, name, display_name, org FROM users WHERE is_admin = 0").all();
+  const users = db.prepare("SELECT id, name, display_name, org FROM users WHERE is_admin = 0 AND deleted_at IS NULL").all();
 
   const records = [];
   for (const user of users) {
@@ -576,8 +576,23 @@ app.post('/api/admin/lock', (req, res) => {
 // ── Users list (for admin) ──
 
 app.get('/api/users', (_req, res) => {
-  const users = db.prepare('SELECT id, name, display_name, username, is_admin, role, org, created_at FROM users').all();
-  res.json(users.map(u => ({ ...u, name: u.display_name || u.name, isAdmin: !!u.is_admin, role: u.role || 'Spelare', org: u.org || null })));
+  const users = db.prepare('SELECT id, name, display_name, username, is_admin, role, org, created_at, deleted_at FROM users').all();
+  res.json(users.map(u => ({ ...u, name: u.display_name || u.name, isAdmin: !!u.is_admin, role: u.role || 'Spelare', org: u.org || null, deleted: !!u.deleted_at, deletedAt: u.deleted_at || null })));
+});
+
+app.post('/api/users/:id/delete', (req, res) => {
+  const user = db.prepare('SELECT id, is_admin FROM users WHERE id = ?').get(req.params.id);
+  if (!user) return res.status(404).json({ error: 'Användaren hittades inte' });
+  if (user.is_admin) return res.status(403).json({ error: 'Kan inte ta bort en admin' });
+  db.prepare("UPDATE users SET deleted_at = datetime('now') WHERE id = ?").run(req.params.id);
+  res.json({ ok: true });
+});
+
+app.post('/api/users/:id/restore', (req, res) => {
+  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(req.params.id);
+  if (!user) return res.status(404).json({ error: 'Användaren hittades inte' });
+  db.prepare('UPDATE users SET deleted_at = NULL WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
 });
 
 app.post('/api/users/:id/make-admin', (req, res) => {

@@ -102,6 +102,7 @@ try { db.exec("UPDATE users SET display_name = name WHERE display_name IS NULL")
 try { db.exec("ALTER TABLE users ADD COLUMN org TEXT"); } catch(e) {}
 try { db.exec("ALTER TABLE bonus_predictions ADD COLUMN tiebreaker INTEGER"); } catch(e) {}
 try { db.exec("ALTER TABLE admin_bonus ADD COLUMN tiebreaker INTEGER"); } catch(e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN deleted_at TEXT"); } catch(e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS bonus_overrides (
