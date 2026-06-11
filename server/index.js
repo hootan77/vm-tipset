@@ -11,7 +11,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const LOCK_DATE = new Date('2026-06-11T18:00:00Z');
+const LOCK_DATE = new Date('2026-06-11T19:00:00Z'); // 21:00 svensk tid (CEST, UTC+2)
 
 function isTournamentLocked() {
   if (Date.now() >= LOCK_DATE.getTime()) return true;
