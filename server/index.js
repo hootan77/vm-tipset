@@ -19,6 +19,50 @@ function isTournamentLocked() {
   return row?.value === '1';
 }
 
+// Map incoming field names to DB columns (whitelist — never interpolate raw user input)
+const SCORE_COLUMNS = { homeGoals: 'home_goals', awayGoals: 'away_goals', penaltyWinner: 'penalty_winner' };
+
+function coerceScore(field, value) {
+  if (field === 'penaltyWinner') return value || null;
+  return value === null || value === undefined || value === '' ? null : parseInt(value);
+}
+
+// Persist a score change while only touching the column(s) that actually changed.
+// This avoids the previous full-row overwrite, which could clobber a freshly-saved
+// goal when home/away were filled in quick succession (stale client state race).
+function saveScoreRow({ table, keyCols, keyVals, body, hasPenalty }) {
+  const placeholders = keyCols.map(() => '?').join(', ');
+  const whereClause = keyCols.map(c => `${c} = ?`).join(' AND ');
+
+  // Ensure the row exists (key columns only; score columns default to NULL)
+  db.prepare(`INSERT OR IGNORE INTO ${table} (${keyCols.join(', ')}) VALUES (${placeholders})`).run(...keyVals);
+
+  // Determine which fields to write: new style (single { field, value }) or legacy (explicit keys)
+  const fields = [];
+  if (body.field && SCORE_COLUMNS[body.field]) {
+    fields.push([body.field, body.value]);
+  } else {
+    if ('homeGoals' in body) fields.push(['homeGoals', body.homeGoals]);
+    if ('awayGoals' in body) fields.push(['awayGoals', body.awayGoals]);
+    if (hasPenalty && 'penaltyWinner' in body) fields.push(['penaltyWinner', body.penaltyWinner]);
+  }
+
+  let goalChanged = false;
+  for (const [field, value] of fields) {
+    const col = SCORE_COLUMNS[field];
+    db.prepare(`UPDATE ${table} SET ${col} = ? WHERE ${whereClause}`).run(coerceScore(field, value), ...keyVals);
+    if (field === 'homeGoals' || field === 'awayGoals') goalChanged = true;
+  }
+
+  // Keep penalty winner consistent: a non-draw (or incomplete) result can't have one
+  if (hasPenalty && goalChanged) {
+    const row = db.prepare(`SELECT home_goals, away_goals FROM ${table} WHERE ${whereClause}`).get(...keyVals);
+    if (!row || row.home_goals == null || row.away_goals == null || row.home_goals !== row.away_goals) {
+      db.prepare(`UPDATE ${table} SET penalty_winner = NULL WHERE ${whereClause}`).run(...keyVals);
+    }
+  }
+}
+
 // ── Auth ──
 
 app.post('/api/register', (req, res) => {
@@ -85,18 +129,15 @@ app.get('/api/predictions/:userId/groups', (req, res) => {
 
 app.post('/api/predictions/:userId/groups', (req, res) => {
   if (isTournamentLocked()) return res.status(403).json({ error: 'Tippningen är låst' });
-  const { group, matchIndex, homeGoals, awayGoals } = req.body;
   const userId = parseInt(req.params.userId);
-  const hg = homeGoals === null || homeGoals === '' ? null : parseInt(homeGoals);
-  const ag = awayGoals === null || awayGoals === '' ? null : parseInt(awayGoals);
-
-  db.prepare(`
-    INSERT INTO group_predictions (user_id, group_name, match_index, home_goals, away_goals)
-    VALUES (?, ?, ?, ?, ?)
-    ON CONFLICT(user_id, group_name, match_index)
-    DO UPDATE SET home_goals = excluded.home_goals, away_goals = excluded.away_goals
-  `).run(userId, group, matchIndex, hg, ag);
-
+  const { group, matchIndex } = req.body;
+  saveScoreRow({
+    table: 'group_predictions',
+    keyCols: ['user_id', 'group_name', 'match_index'],
+    keyVals: [userId, group, matchIndex],
+    body: req.body,
+    hasPenalty: false,
+  });
   res.json({ ok: true });
 });
 
@@ -114,18 +155,15 @@ app.get('/api/predictions/:userId/knockout', (req, res) => {
 
 app.post('/api/predictions/:userId/knockout', (req, res) => {
   if (isTournamentLocked()) return res.status(403).json({ error: 'Tippningen är låst' });
-  const { matchId, homeGoals, awayGoals, penaltyWinner } = req.body;
   const userId = parseInt(req.params.userId);
-  const hg = homeGoals === null || homeGoals === '' ? null : parseInt(homeGoals);
-  const ag = awayGoals === null || awayGoals === '' ? null : parseInt(awayGoals);
-
-  db.prepare(`
-    INSERT INTO knockout_predictions (user_id, match_id, home_goals, away_goals, penalty_winner)
-    VALUES (?, ?, ?, ?, ?)
-    ON CONFLICT(user_id, match_id)
-    DO UPDATE SET home_goals = excluded.home_goals, away_goals = excluded.away_goals, penalty_winner = excluded.penalty_winner
-  `).run(userId, matchId, hg, ag, penaltyWinner || null);
-
+  const { matchId } = req.body;
+  saveScoreRow({
+    table: 'knockout_predictions',
+    keyCols: ['user_id', 'match_id'],
+    keyVals: [userId, matchId],
+    body: req.body,
+    hasPenalty: true,
+  });
   res.json({ ok: true });
 });
 
@@ -142,17 +180,14 @@ app.get('/api/admin/groups', (_req, res) => {
 });
 
 app.post('/api/admin/groups', (req, res) => {
-  const { group, matchIndex, homeGoals, awayGoals } = req.body;
-  const hg = homeGoals === null || homeGoals === '' ? null : parseInt(homeGoals);
-  const ag = awayGoals === null || awayGoals === '' ? null : parseInt(awayGoals);
-
-  db.prepare(`
-    INSERT INTO admin_group_results (group_name, match_index, home_goals, away_goals)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(group_name, match_index)
-    DO UPDATE SET home_goals = excluded.home_goals, away_goals = excluded.away_goals
-  `).run(group, matchIndex, hg, ag);
-
+  const { group, matchIndex } = req.body;
+  saveScoreRow({
+    table: 'admin_group_results',
+    keyCols: ['group_name', 'match_index'],
+    keyVals: [group, matchIndex],
+    body: req.body,
+    hasPenalty: false,
+  });
   res.json({ ok: true });
 });
 
@@ -166,17 +201,14 @@ app.get('/api/admin/knockout', (_req, res) => {
 });
 
 app.post('/api/admin/knockout', (req, res) => {
-  const { matchId, homeGoals, awayGoals, penaltyWinner } = req.body;
-  const hg = homeGoals === null || homeGoals === '' ? null : parseInt(homeGoals);
-  const ag = awayGoals === null || awayGoals === '' ? null : parseInt(awayGoals);
-
-  db.prepare(`
-    INSERT INTO admin_knockout_results (match_id, home_goals, away_goals, penalty_winner)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(match_id)
-    DO UPDATE SET home_goals = excluded.home_goals, away_goals = excluded.away_goals, penalty_winner = excluded.penalty_winner
-  `).run(matchId, hg, ag, penaltyWinner || null);
-
+  const { matchId } = req.body;
+  saveScoreRow({
+    table: 'admin_knockout_results',
+    keyCols: ['match_id'],
+    keyVals: [matchId],
+    body: req.body,
+    hasPenalty: true,
+  });
   res.json({ ok: true });
 });
 

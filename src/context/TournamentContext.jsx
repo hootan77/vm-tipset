@@ -147,52 +147,29 @@ export function TournamentProvider({ children }) {
     load();
   }, [user]);
 
-  const saveGroupScore = useCallback(async (group, matchIndex, field, value, isAdmin) => {
+  const saveGroupScore = useCallback((group, matchIndex, field, value, isAdmin) => {
     dispatch({ type: 'SET_GROUP_SCORE', group, matchIndex, field, value, isAdmin });
 
-    const key = isAdmin ? 'adminGroupMatches' : 'groupMatches';
-    const match = state[key][group][matchIndex];
-    const updated = { ...match, [field]: value };
-
+    // Send only the changed field so concurrent saves can't clobber each other
     const url = isAdmin ? `${API}/admin/groups` : `${API}/predictions/${user.id}/groups`;
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        group,
-        matchIndex,
-        homeGoals: updated.homeGoals,
-        awayGoals: updated.awayGoals,
-      }),
+      body: JSON.stringify({ group, matchIndex, field, value }),
     });
-  }, [state, user]);
+  }, [user]);
 
-  const saveKnockoutScore = useCallback(async (matchId, field, value, isAdmin) => {
+  const saveKnockoutScore = useCallback((matchId, field, value, isAdmin) => {
     dispatch({ type: 'SET_KNOCKOUT_SCORE', matchId, field, value, isAdmin });
 
-    const key = isAdmin ? 'adminKnockoutPredictions' : 'knockoutPredictions';
-    const current = state[key][matchId] || {};
-    const updated = { ...current, [field]: value };
-    if (field === 'homeGoals' || field === 'awayGoals') {
-      const h = updated.homeGoals != null ? parseInt(updated.homeGoals) : null;
-      const a = updated.awayGoals != null ? parseInt(updated.awayGoals) : null;
-      if (h == null || a == null || h !== a) {
-        updated.penaltyWinner = null;
-      }
-    }
-
+    // Send only the changed field; the server clears penalty winner when no longer a draw
     const url = isAdmin ? `${API}/admin/knockout` : `${API}/predictions/${user.id}/knockout`;
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        matchId,
-        homeGoals: updated.homeGoals,
-        awayGoals: updated.awayGoals,
-        penaltyWinner: updated.penaltyWinner || null,
-      }),
+      body: JSON.stringify({ matchId, field, value }),
     });
-  }, [state, user]);
+  }, [user]);
 
   const saveTopScorer = useCallback((value, isAdmin) => {
     dispatch({ type: 'SET_TOP_SCORER', value, isAdmin });
