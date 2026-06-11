@@ -1,8 +1,9 @@
-import { createContext, useContext, useReducer, useEffect, useMemo, useCallback, useState } from 'react';
+import { createContext, useContext, useReducer, useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { TEAMS, GROUP_NAMES, getGroupMatchesForGroup } from '../data/teams';
 import { calculateStandings, sortStandings, getBestThirdPlaced } from '../logic/standings';
 import { buildRoundOf32, buildFullBracket } from '../logic/knockout';
 import { useAuth, API } from './AuthContext';
+import { useLanguage } from './LanguageContext';
 
 const LOCK_DATE = new Date('2026-06-11T18:00:00Z');
 
@@ -110,6 +111,8 @@ export function TournamentProvider({ children }) {
   const { user } = useAuth();
   const [state, dispatch] = useReducer(reducer, null, initState);
   const [locked, setLocked] = useState(false);
+  const [lockToast, setLockToast] = useState(false);
+  const lockToastTimer = useRef(null);
 
   useEffect(() => {
     function checkLock() {
@@ -118,6 +121,25 @@ export function TournamentProvider({ children }) {
     checkLock();
     const interval = setInterval(checkLock, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  // POST a save; if the server rejects it because the tournament is locked,
+  // lock the UI and show a transient warning so the player knows it wasn't saved.
+  const postSave = useCallback((url, body) => {
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+      .then(res => {
+        if (res.status === 403) {
+          setLocked(true);
+          setLockToast(true);
+          if (lockToastTimer.current) clearTimeout(lockToastTimer.current);
+          lockToastTimer.current = setTimeout(() => setLockToast(false), 6000);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -152,34 +174,22 @@ export function TournamentProvider({ children }) {
 
     // Send only the changed field so concurrent saves can't clobber each other
     const url = isAdmin ? `${API}/admin/groups` : `${API}/predictions/${user.id}/groups`;
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ group, matchIndex, field, value }),
-    });
-  }, [user]);
+    postSave(url, { group, matchIndex, field, value });
+  }, [user, postSave]);
 
   const saveKnockoutScore = useCallback((matchId, field, value, isAdmin) => {
     dispatch({ type: 'SET_KNOCKOUT_SCORE', matchId, field, value, isAdmin });
 
     // Send only the changed field; the server clears penalty winner when no longer a draw
     const url = isAdmin ? `${API}/admin/knockout` : `${API}/predictions/${user.id}/knockout`;
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matchId, field, value }),
-    });
-  }, [user]);
+    postSave(url, { matchId, field, value });
+  }, [user, postSave]);
 
   const saveTopScorer = useCallback((value, isAdmin) => {
     dispatch({ type: 'SET_TOP_SCORER', value, isAdmin });
     const url = isAdmin ? `${API}/admin/top-scorer` : `${API}/predictions/${user.id}/top-scorer`;
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ playerName: value }),
-    });
-  }, [user]);
+    postSave(url, { playerName: value });
+  }, [user, postSave]);
 
   const saveBonusField = useCallback((field, value, isAdmin) => {
     const fieldMap = { firstRedCardNation: 'adminFirstRedCardNation', goldenGlove: 'adminGoldenGlove', tiebreaker: 'adminTiebreaker' };
@@ -192,12 +202,8 @@ export function TournamentProvider({ children }) {
     const updated = { ...currentState, [field]: value };
 
     const url = isAdmin ? `${API}/admin/bonus` : `${API}/predictions/${user.id}/bonus`;
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updated),
-    });
-  }, [state, user]);
+    postSave(url, updated);
+  }, [state, user, postSave]);
 
   const toggleLock = useCallback(async () => {
     const newVal = !locked;
@@ -246,9 +252,25 @@ export function TournamentProvider({ children }) {
   }, [state, computeStandings]);
 
   return (
-    <TournamentContext.Provider value={{ state, dispatch, computed, saveGroupScore, saveKnockoutScore, saveTopScorer, saveBonusField, locked, toggleLock }}>
+    <TournamentContext.Provider value={{ state, dispatch, computed, saveGroupScore, saveKnockoutScore, saveTopScorer, saveBonusField, locked, toggleLock, lockToast }}>
       {children}
+      <LockToast />
     </TournamentContext.Provider>
+  );
+}
+
+function LockToast() {
+  const { lockToast } = useTournament();
+  const { t } = useLanguage();
+  if (!lockToast) return null;
+  return (
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[calc(100%-2rem)] bg-red-600 text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3">
+      <span className="text-xl shrink-0">🔒</span>
+      <div className="text-sm">
+        <p className="font-semibold">{t('predict.locked')}</p>
+        <p className="text-red-100">{t('predict.lockedToast')}</p>
+      </div>
+    </div>
   );
 }
 

@@ -59,6 +59,7 @@ const translations = {
     'predict.missingBronze': 'Bronsmatch saknas!',
     'predict.locked': 'Tippningen är låst',
     'predict.lockedDesc': 'Du kan inte längre ändra dina tips.',
+    'predict.lockedToast': 'Tippningen är låst – ändringen sparades inte.',
     'predict.unlock': 'Lås upp tippning',
     'predict.lock': 'Lås tippning',
 
@@ -313,6 +314,7 @@ const translations = {
     'predict.missingBronze': 'Bronze match missing!',
     'predict.locked': 'Predictions are locked',
     'predict.lockedDesc': 'You can no longer change your predictions.',
+    'predict.lockedToast': 'Predictions are locked – your change was not saved.',
     'predict.unlock': 'Unlock predictions',
     'predict.lock': 'Lock predictions',
 
