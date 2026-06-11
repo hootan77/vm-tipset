@@ -525,27 +525,30 @@ app.get('/api/admin/prediction-stats', (_req, res) => {
     const ts = db.prepare('SELECT player_name FROM top_scorer_predictions WHERE user_id = ?').get(user.id);
     const bonus = db.prepare('SELECT first_red_card_nation, golden_glove FROM bonus_predictions WHERE user_id = ?').get(user.id);
 
-    // Only compute champion/finalists if the user filled all 72 group matches (bracket fully resolves)
+    // Compute the bracket from whatever the player entered and read off the final/bronze.
+    // We don't gate on "all 72 groups filled": for statistics we want to count whatever a
+    // player actually predicted. A champion is counted only if their final resolves to a
+    // winner (both teams known + a decisive result / penalty winner), so idle/empty players
+    // produce no champion and aren't counted.
     const completedGroups = groupRows.filter(p => p.home_goals != null && p.away_goals != null).length;
     let champion = null;
     let finalists = [];
     let bronzeWinner = null;
-    if (completedGroups >= 72) {
-      const bracket = computeBracketFromData(groupRows, knockoutRows);
-      const finalMatch = bracket.final?.[0];
-      if (finalMatch) {
-        if (finalMatch.home) finalists.push(finalMatch.home);
-        if (finalMatch.away) finalists.push(finalMatch.away);
-        champion = getMatchWinner(finalMatch);
-      }
-      const bronzeMatch = bracket.bronze?.[0];
-      if (bronzeMatch) bronzeWinner = getMatchWinner(bronzeMatch);
+    const bracket = computeBracketFromData(groupRows, knockoutRows);
+    const finalMatch = bracket.final?.[0];
+    if (finalMatch) {
+      if (finalMatch.home) finalists.push(finalMatch.home);
+      if (finalMatch.away) finalists.push(finalMatch.away);
+      champion = getMatchWinner(finalMatch) || null;
     }
+    const bronzeMatch = bracket.bronze?.[0];
+    if (bronzeMatch) bronzeWinner = getMatchWinner(bronzeMatch) || null;
 
     records.push({
       id: user.id,
       name: user.display_name || user.name,
       org: user.org || null,
+      groupsComplete: completedGroups >= 72,
       champion,
       finalists,
       bronzeWinner,

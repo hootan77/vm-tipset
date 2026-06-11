@@ -226,7 +226,7 @@ const translations = {
     'ps.votes': 'röster',
     'ps.players': 'spelare',
     'ps.noData': 'Ingen data ännu',
-    'ps.incompleteNote': 'Endast spelare som fyllt i alla gruppspelsmatcher räknas för bracket-statistik.',
+    'ps.incompleteNote': 'En spelare räknas för mästare/finalister så snart deras slutspelsträd löser sig fram till en final med vinnare.',
 
     // Venues
     'venues.title': 'VM Arenor 2026',
@@ -480,7 +480,7 @@ const translations = {
     'ps.votes': 'votes',
     'ps.players': 'players',
     'ps.noData': 'No data yet',
-    'ps.incompleteNote': 'Only players who filled in all group matches are counted for bracket statistics.',
+    'ps.incompleteNote': 'A player is counted for champion/finalists as soon as their bracket resolves to a final with a winner.',
 
     // Venues
     'venues.title': 'WC Venues 2026',
