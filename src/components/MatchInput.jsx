@@ -4,7 +4,7 @@ import { getFlag, getTeamName } from '../data/flags';
 import { scoreGroupMatch } from '../logic/scoring';
 
 export default function MatchInput({ group, matchIndex, match, isAdmin }) {
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const { saveGroupScore, locked, state } = useTournament();
 
   const formatDate = (dateStr) => {
@@ -21,17 +21,24 @@ export default function MatchInput({ group, matchIndex, match, isAdmin }) {
     saveGroupScore(group, matchIndex, field, parsed, isAdmin);
   };
 
+  const adminMatch = !isAdmin ? state.adminGroupMatches[group]?.[matchIndex] : null;
+  const hasReal = adminMatch?.homeGoals != null && adminMatch?.awayGoals != null;
+
   let points = null;
-  if (!isAdmin) {
-    const adminMatch = state.adminGroupMatches[group]?.[matchIndex];
-    if (adminMatch?.homeGoals != null && adminMatch?.awayGoals != null &&
-        match.homeGoals != null && match.awayGoals != null) {
-      points = scoreGroupMatch(match, adminMatch);
-    }
+  if (!isAdmin && hasReal && match.homeGoals != null && match.awayGoals != null) {
+    points = scoreGroupMatch(match, adminMatch);
   }
 
   return (
-    <div className="border border-gray-100 rounded-lg p-2 hover:bg-gray-50 transition-colors">
+    <div className="group relative border border-gray-100 rounded-lg p-2 hover:bg-gray-50 transition-colors">
+      {hasReal && (
+        <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-1 z-20 hidden group-hover:flex items-center gap-1.5 whitespace-nowrap bg-gray-900 text-white text-xs rounded-md px-2.5 py-1 shadow-lg">
+          <span className="text-gray-400">{t('predict.realResult')}:</span>
+          <span>{getFlag(match.home)}</span>
+          <span className="font-bold">{adminMatch.homeGoals} – {adminMatch.awayGoals}</span>
+          <span>{getFlag(match.away)}</span>
+        </div>
+      )}
       {match.date && (
         <div className="flex items-center justify-between text-xs text-gray-400 mb-1 px-1">
           <span>{formatDate(match.date)} {match.time}</span>

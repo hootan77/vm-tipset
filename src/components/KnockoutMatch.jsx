@@ -10,8 +10,18 @@ export default function KnockoutMatch({ match, isAdmin, points }) {
     const d = new Date(dateStr + 'T00:00:00');
     return d.toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { day: 'numeric', month: 'short' });
   };
-  const { saveKnockoutScore, locked } = useTournament();
+  const { saveKnockoutScore, locked, computed } = useTournament();
   const readOnly = !isAdmin && locked;
+
+  // The real played match for this bracket slot (admin's actual teams + score)
+  let realMatch = null;
+  if (!isAdmin && computed?.adminBracket) {
+    for (const round of Object.values(computed.adminBracket)) {
+      const m = round.find(x => x.id === match.id);
+      if (m) { realMatch = m; break; }
+    }
+  }
+  const hasReal = realMatch && realMatch.homeGoals != null && realMatch.awayGoals != null;
 
   const handleChange = (field, value) => {
     if (readOnly) return;
@@ -29,10 +39,18 @@ export default function KnockoutMatch({ match, isAdmin, points }) {
   const isDraw = h != null && a != null && h === a;
   const needsPenaltyWinner = isDraw && hasTeams;
 
+  const realTitle = hasReal
+    ? `${t('predict.realResult')}: ${getFlag(realMatch.home)} ${getTeamName(realMatch.home, lang)} ${realMatch.homeGoals} – ${realMatch.awayGoals} ${getTeamName(realMatch.away, lang)} ${getFlag(realMatch.away)}` +
+      (realMatch.penaltyWinner ? ` (pen: ${getTeamName(realMatch.penaltyWinner, lang)})` : '')
+    : undefined;
+
   return (
-    <div className={`rounded-lg border text-xs ${
-      hasTeams ? 'border-gray-300 bg-white shadow-sm' : 'border-dashed border-gray-200 bg-gray-50'
-    }`}>
+    <div
+      title={realTitle}
+      className={`rounded-lg border text-xs ${
+        hasTeams ? 'border-gray-300 bg-white shadow-sm' : 'border-dashed border-gray-200 bg-gray-50'
+      } ${hasReal ? 'cursor-help' : ''}`}
+    >
       {(match.matchNum || match.date) && (
         <div className="flex items-center justify-between px-2 py-0.5 text-[10px] text-gray-400 border-b border-gray-100">
           <span>{match.matchNum ? `M${match.matchNum}` : ''} {match.date ? formatDate(match.date) : ''}</span>
