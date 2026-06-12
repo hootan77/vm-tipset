@@ -19,6 +19,12 @@ function isTournamentLocked() {
   return row?.value === '1';
 }
 
+function isAdminUser(id) {
+  if (id == null) return false;
+  const row = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(parseInt(id));
+  return !!row?.is_admin;
+}
+
 // Map incoming field names to DB columns (whitelist — never interpolate raw user input)
 const SCORE_COLUMNS = { homeGoals: 'home_goals', awayGoals: 'away_goals', penaltyWinner: 'penalty_winner' };
 
@@ -498,7 +504,8 @@ app.get('/api/admin/bonus-overrides/:userId', (req, res) => {
 });
 
 app.post('/api/admin/bonus-overrides/:userId', (req, res) => {
-  const { field, awarded } = req.body;
+  const { field, awarded, adminId } = req.body;
+  if (!isAdminUser(adminId)) return res.status(403).json({ error: 'Endast admin' });
   const validFields = ['topScorer', 'firstRedCardNation', 'goldenGlove'];
   if (!validFields.includes(field)) return res.status(400).json({ error: 'Invalid field' });
   db.prepare(`

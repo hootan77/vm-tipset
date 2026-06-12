@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { API } from '../context/AuthContext';
+import { API, useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { TEAMS, GROUP_NAMES, getGroupMatchesForGroup } from '../data/teams';
 import { getFlag, getTeamName } from '../data/flags';
@@ -8,6 +8,8 @@ import { buildRoundOf32, buildFullBracket } from '../logic/knockout';
 
 export default function ViewUserPredictions({ viewUser, onBack }) {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const isAdmin = !!user?.isAdmin;
   const [data, setData] = useState(null);
 
   useEffect(() => {
@@ -17,6 +19,7 @@ export default function ViewUserPredictions({ viewUser, onBack }) {
   }, [viewUser.id]);
 
   const toggleOverride = useCallback(async (field, currentlyAwarded) => {
+    if (!isAdmin) return;
     const newVal = !currentlyAwarded;
     // Optimistic update
     setData(prev => ({
@@ -26,9 +29,9 @@ export default function ViewUserPredictions({ viewUser, onBack }) {
     await fetch(`${API}/admin/bonus-overrides/${viewUser.id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ field, awarded: newVal }),
+      body: JSON.stringify({ field, awarded: newVal, adminId: user.id }),
     });
-  }, [viewUser.id]);
+  }, [viewUser.id, isAdmin, user]);
 
   if (!data) return <p className="text-gray-500 p-8">{t('vp.loading')}</p>;
 
@@ -107,7 +110,7 @@ export default function ViewUserPredictions({ viewUser, onBack }) {
                     </p>
                   </div>
                 </div>
-                {!isAutoMatch && userVal && (
+                {isAdmin && !isAutoMatch && userVal && (
                   <button
                     onClick={() => toggleOverride(key, isOverridden)}
                     className={`text-xs px-3 py-1 rounded-lg font-medium transition-colors ${

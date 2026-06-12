@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { API } from '../context/AuthContext';
+import { API, useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
 const BONUS_FIELDS = [
@@ -10,6 +10,7 @@ const BONUS_FIELDS = [
 
 export default function AdminBonusOverview() {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [data, setData] = useState(null);
 
   const loadData = useCallback(() => {
@@ -30,7 +31,7 @@ export default function AdminBonusOverview() {
     await fetch(`${API}/admin/bonus-overrides/${userId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ field, awarded: newVal }),
+      body: JSON.stringify({ field, awarded: newVal, adminId: user?.id }),
     });
   };
 

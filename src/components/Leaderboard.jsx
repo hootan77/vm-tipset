@@ -152,8 +152,14 @@ export default function Leaderboard({ onViewUser }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((row, i) => (
-                <tr key={row.id} className={`border-b last:border-0 ${i === 0 ? 'bg-yellow-50' : i === 1 ? 'bg-gray-50' : i === 2 ? 'bg-orange-50' : ''}`}>
+              {filtered.map((row, i) => {
+                const clickable = showViewButton && onViewUser;
+                return (
+                <tr
+                  key={row.id}
+                  onClick={clickable ? () => onViewUser({ id: row.id, name: row.name }) : undefined}
+                  className={`border-b last:border-0 ${i === 0 ? 'bg-yellow-50' : i === 1 ? 'bg-gray-50' : i === 2 ? 'bg-orange-50' : ''} ${clickable ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                >
                   <td className="py-3 px-4">
                     {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
                   </td>
@@ -166,10 +172,10 @@ export default function Leaderboard({ onViewUser }) {
                   <td className="py-3 px-4 text-center text-gray-600">{row.exactResults}</td>
                   <td className="py-3 px-4 text-center text-gray-600">{row.correctOutcomes}</td>
                   <td className="py-3 px-4 text-center text-gray-400">{row.totalPredictions}/108</td>
-                  {showViewButton && onViewUser && (
+                  {clickable && (
                     <td className="py-3 px-4 text-center">
                       <button
-                        onClick={() => onViewUser({ id: row.id, name: row.name })}
+                        onClick={(e) => { e.stopPropagation(); onViewUser({ id: row.id, name: row.name }); }}
                         className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs hover:bg-blue-100 transition-colors"
                       >
                         {t('um.view')}
@@ -177,7 +183,8 @@ export default function Leaderboard({ onViewUser }) {
                     </td>
                   )}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
