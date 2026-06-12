@@ -270,11 +270,28 @@ function PredictionProgress() {
   );
 }
 
+// Read (and clear) a pending "view user" stashed before a reload
+function takePendingViewUser() {
+  try {
+    const raw = sessionStorage.getItem('vm-view-user');
+    if (raw) { sessionStorage.removeItem('vm-view-user'); return JSON.parse(raw); }
+  } catch { /* ignore */ }
+  return null;
+}
+
+// Navigate to a player's tips via a full page reload so the latest deployed
+// code is loaded (stale clients otherwise keep showing old UI until reload)
+function goToUser(u) {
+  try { sessionStorage.setItem('vm-view-user', JSON.stringify({ id: u.id, name: u.name })); } catch { /* ignore */ }
+  window.location.reload();
+}
+
 function MainApp() {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const [view, setView] = useState('predict');
-  const [viewUser, setViewUser] = useState(null);
+  const [pending] = useState(takePendingViewUser);
+  const [view, setView] = useState(pending ? 'leaderboard' : 'predict');
+  const [viewUser, setViewUser] = useState(pending);
   const remaining = useRemainingPredictions();
 
   if (viewUser) {
@@ -311,7 +328,7 @@ function MainApp() {
           </>
         )}
 
-        {view === 'leaderboard' && <Leaderboard onViewUser={setViewUser} />}
+        {view === 'leaderboard' && <Leaderboard onViewUser={goToUser} />}
         {view === 'venues' && <Venues />}
         {view === 'funfacts' && <FunFacts />}
         {view === 'balls' && <WorldCupBalls />}
