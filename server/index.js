@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db from './db.js';
-import { computeBracketFromData, getMatchWinner } from './bracket.js';
+import { computeBracketFromData, getMatchWinner, GROUP_SCHEDULE, GROUP_NAMES } from './bracket.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -230,6 +230,33 @@ function getTeamsInRound(bracket, round) {
   return teams;
 }
 
+// Kickoff timestamp — schedule times are CEST (UTC+2)
+function kickoffTime(date, time) {
+  return new Date(`${date}T${time || '00:00'}:00+02:00`).getTime();
+}
+
+// The next group match to be decided: earliest by kickoff that has no admin result yet
+function computeNextGroupMatch(adminGroupMap) {
+  let best = null;
+  for (const group of GROUP_NAMES) {
+    const matches = GROUP_SCHEDULE[group] || [];
+    for (let i = 0; i < matches.length; i++) {
+      const result = adminGroupMap[group]?.[i];
+      if (result && result.homeGoals != null && result.awayGoals != null) continue; // already played
+      const kickoff = kickoffTime(matches[i].date, matches[i].time);
+      if (best === null || kickoff < best.kickoff) {
+        best = {
+          group, matchIndex: i,
+          home: matches[i].home, away: matches[i].away,
+          date: matches[i].date, time: matches[i].time, venue: matches[i].venue,
+          kickoff,
+        };
+      }
+    }
+  }
+  return best;
+}
+
 app.get('/api/leaderboard', (_req, res) => {
   const users = db.prepare("SELECT id, name, display_name, role, org FROM users WHERE is_admin = 0 AND deleted_at IS NULL").all();
   const adminGroupRows = db.prepare('SELECT group_name, match_index, home_goals, away_goals FROM admin_group_results').all();
@@ -244,6 +271,8 @@ app.get('/api/leaderboard', (_req, res) => {
   const adminBracket = computeBracketFromData(adminGroupRows, adminKnockoutRows);
   const adminTopScorer = db.prepare('SELECT player_name FROM admin_top_scorer WHERE id = 1').get();
   const adminBonus = db.prepare('SELECT first_red_card_nation, golden_glove FROM admin_bonus WHERE id = 1').get();
+
+  const nextMatch = computeNextGroupMatch(adminGroupMap);
 
   const leaderboard = [];
 
@@ -378,6 +407,14 @@ app.get('/api/leaderboard', (_req, res) => {
     if (userBonus?.tiebreaker != null) filledBonus++;
     const totalPredictions = filledGroups + filledKnockout + filledBonus;
 
+    let nextMatchPrediction = null;
+    if (nextMatch) {
+      const pred = userGroupRows.find(p => p.group_name === nextMatch.group && p.match_index === nextMatch.matchIndex);
+      if (pred && pred.home_goals != null && pred.away_goals != null) {
+        nextMatchPrediction = { homeGoals: pred.home_goals, awayGoals: pred.away_goals };
+      }
+    }
+
     leaderboard.push({
       id: user.id,
       name: user.display_name || user.name,
@@ -391,6 +428,7 @@ app.get('/api/leaderboard', (_req, res) => {
       correctOutcomes,
       totalPredictions,
       tiebreakerDiff,
+      nextMatchPrediction,
     });
   }
 
@@ -402,7 +440,12 @@ app.get('/api/leaderboard', (_req, res) => {
     const bDiff = b.tiebreakerDiff ?? Infinity;
     return aDiff - bDiff;
   });
-  res.json(leaderboard);
+
+  const nextMatchInfo = nextMatch
+    ? { group: nextMatch.group, home: nextMatch.home, away: nextMatch.away, date: nextMatch.date, time: nextMatch.time, venue: nextMatch.venue }
+    : null;
+
+  res.json({ players: leaderboard, nextMatch: nextMatchInfo });
 });
 
 // ── Top scorer ──

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth, API } from '../context/AuthContext';
 import { useTournament } from '../context/TournamentContext';
 import { useLanguage } from '../context/LanguageContext';
+import { getFlag, getTeamName } from '../data/flags';
 
 const ROLE_KEYS = ['Alla', 'Spelare', 'Ledare', 'Familj'];
 const ORG_KEYS = ['Alla', 'Enskede', 'QBank', 'Friends', 'MNO'];
@@ -9,16 +10,23 @@ const ORG_KEYS = ['Alla', 'Enskede', 'QBank', 'Friends', 'MNO'];
 export default function Leaderboard({ onViewUser }) {
   const { user, refreshUser } = useAuth();
   const { locked } = useTournament();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [data, setData] = useState([]);
+  const [nextMatch, setNextMatch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState('Alla');
   const [orgFilter, setOrgFilter] = useState('Alla');
 
+  function applyData(d) {
+    // Endpoint returns { players, nextMatch }; tolerate a bare array too
+    if (Array.isArray(d)) { setData(d); setNextMatch(null); }
+    else { setData(d.players || []); setNextMatch(d.nextMatch || null); }
+  }
+
   useEffect(() => {
     fetch(`${API}/leaderboard`)
       .then(r => r.json())
-      .then(d => { setData(d); setLoading(false); })
+      .then(d => { applyData(d); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
@@ -27,12 +35,19 @@ export default function Leaderboard({ onViewUser }) {
     refreshUser();
     fetch(`${API}/leaderboard`)
       .then(r => r.json())
-      .then(d => { setData(d); setLoading(false); });
+      .then(d => { applyData(d); setLoading(false); });
   }
 
   const roleLabel = (role) => {
     if (role === 'Alla') return t('lb.all');
     return t(`role.${role.toLowerCase()}`) || role;
+  };
+
+  // Show the official (CEST) date + time string, matching how matches appear elsewhere
+  const formatKickoff = (m) => {
+    if (!m?.date) return '';
+    const ds = new Date(m.date + 'T00:00:00').toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { day: 'numeric', month: 'short' });
+    return `${ds} ${m.time || ''}`.trim();
   };
 
   const isAdmin = !!user?.isAdmin;
@@ -146,6 +161,15 @@ export default function Leaderboard({ onViewUser }) {
                 <th className="text-center py-3 px-4">{t('lb.col.exact')}</th>
                 <th className="text-center py-3 px-4">{t('lb.col.outcome')}</th>
                 <th className="text-center py-3 px-4">{t('lb.col.tips')}</th>
+                {showViewButton && nextMatch && (
+                  <th className="text-center py-3 px-4 normal-case">
+                    <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{t('lb.nextMatch')}</div>
+                    <div className="text-xs font-semibold text-gray-700 whitespace-nowrap">
+                      {getFlag(nextMatch.home)} {getTeamName(nextMatch.home, lang)} – {getTeamName(nextMatch.away, lang)} {getFlag(nextMatch.away)}
+                    </div>
+                    <div className="text-[10px] text-gray-400 font-normal normal-case">{formatKickoff(nextMatch)}</div>
+                  </th>
+                )}
                 {showViewButton && onViewUser && (
                   <th className="text-center py-3 px-4"></th>
                 )}
@@ -172,6 +196,13 @@ export default function Leaderboard({ onViewUser }) {
                   <td className="py-3 px-4 text-center text-gray-600">{row.exactResults}</td>
                   <td className="py-3 px-4 text-center text-gray-600">{row.correctOutcomes}</td>
                   <td className="py-3 px-4 text-center text-gray-400">{row.totalPredictions}/108</td>
+                  {showViewButton && nextMatch && (
+                    <td className="py-3 px-4 text-center">
+                      {row.nextMatchPrediction
+                        ? <span className="font-semibold text-gray-800">{row.nextMatchPrediction.homeGoals} – {row.nextMatchPrediction.awayGoals}</span>
+                        : <span className="text-gray-300">–</span>}
+                    </td>
+                  )}
                   {clickable && (
                     <td className="py-3 px-4 text-center">
                       <button

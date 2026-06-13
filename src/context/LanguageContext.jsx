@@ -107,6 +107,7 @@ const translations = {
     'lb.col.exact': 'Exakta',
     'lb.col.outcome': 'Rätt utfall',
     'lb.col.tips': 'Tips',
+    'lb.nextMatch': 'Nästa match',
 
     // Group stage
     'group.title': 'Grupp',
@@ -363,6 +364,7 @@ const translations = {
     'lb.col.exact': 'Exact',
     'lb.col.outcome': 'Correct',
     'lb.col.tips': 'Tips',
+    'lb.nextMatch': 'Next match',
 
     // Group stage
     'group.title': 'Group',
