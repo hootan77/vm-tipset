@@ -510,6 +510,55 @@ app.post('/api/admin/bonus', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Admin: find & fix stale knockout penalty winners ──
+
+// A stale penalty winner = a drawn knockout match whose stored penalty_winner
+// is no longer one of the two teams currently in that slot (e.g. the player
+// changed an earlier result so a different team advanced).
+app.get('/api/admin/stale-penalties', (_req, res) => {
+  const users = db.prepare("SELECT id, name, display_name FROM users WHERE is_admin = 0 AND deleted_at IS NULL").all();
+  const roundLabels = { r32: '16-delsfinal', r16: 'Åttondelsfinal', qf: 'Kvartsfinal', sf: 'Semifinal', final: 'Final', bronze: 'Bronsmatch' };
+
+  const result = [];
+  for (const user of users) {
+    const groupRows = db.prepare('SELECT group_name, match_index, home_goals, away_goals FROM group_predictions WHERE user_id = ?').all(user.id);
+    const knockoutRows = db.prepare('SELECT match_id, home_goals, away_goals, penalty_winner FROM knockout_predictions WHERE user_id = ?').all(user.id);
+    const bracket = computeBracketFromData(groupRows, knockoutRows);
+
+    const stale = [];
+    for (const [round, matches] of Object.entries(bracket)) {
+      for (const m of matches) {
+        if (m.home && m.away &&
+            m.homeGoals != null && m.awayGoals != null && m.homeGoals === m.awayGoals &&
+            m.penaltyWinner && m.penaltyWinner !== m.home && m.penaltyWinner !== m.away) {
+          stale.push({
+            matchId: m.id, round, roundLabel: roundLabels[round] || round,
+            home: m.home, away: m.away, homeGoals: m.homeGoals, awayGoals: m.awayGoals,
+            stalePenaltyWinner: m.penaltyWinner,
+          });
+        }
+      }
+    }
+    if (stale.length) result.push({ userId: user.id, name: user.display_name || user.name, matches: stale });
+  }
+  res.json({ users: result });
+});
+
+// Admin edits a specific player's knockout match (bypasses the lock)
+app.post('/api/admin/users/:userId/knockout', (req, res) => {
+  const { adminId, matchId } = req.body;
+  if (!isAdminUser(adminId)) return res.status(403).json({ error: 'Endast admin' });
+  if (!matchId) return res.status(400).json({ error: 'matchId krävs' });
+  saveScoreRow({
+    table: 'knockout_predictions',
+    keyCols: ['user_id', 'match_id'],
+    keyVals: [parseInt(req.params.userId), matchId],
+    body: req.body,
+    hasPenalty: true,
+  });
+  res.json({ ok: true });
+});
+
 // ── Admin data management ──
 
 app.get('/api/admin/knockout-results', (_req, res) => {

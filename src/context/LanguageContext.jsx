@@ -231,6 +231,14 @@ const translations = {
     'ps.noData': 'Ingen data ännu',
     'ps.incompleteNote': 'En spelare räknas för mästare/finalister så snart deras slutspelsträd löser sig fram till en final med vinnare.',
 
+    // Stale penalty winners (admin fix tool)
+    'sp.title': 'Felaktiga slutspelsträd',
+    'sp.subtitle': 'Spelare med en straffvinnare som inte längre är med i matchen',
+    'sp.none': 'Inga felaktiga träd hittades 🎉',
+    'sp.staleWas': 'Ogiltig straffvinnare',
+    'sp.pickWinner': 'Välj straffvinnare:',
+    'sp.clear': 'Rensa',
+
     // Venues
     'venues.title': 'VM Arenor 2026',
     'venues.subtitle': '{count} arenor i 3 länder — total kapacitet {capacity} platser',
@@ -487,6 +495,14 @@ const translations = {
     'ps.players': 'players',
     'ps.noData': 'No data yet',
     'ps.incompleteNote': 'A player is counted for champion/finalists as soon as their bracket resolves to a final with a winner.',
+
+    // Stale penalty winners (admin fix tool)
+    'sp.title': 'Broken knockout trees',
+    'sp.subtitle': 'Players with a penalty winner no longer in the match',
+    'sp.none': 'No broken trees found 🎉',
+    'sp.staleWas': 'Invalid penalty winner',
+    'sp.pickWinner': 'Pick penalty winner:',
+    'sp.clear': 'Clear',
 
     // Venues
     'venues.title': 'WC Venues 2026',

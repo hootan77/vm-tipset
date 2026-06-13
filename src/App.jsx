@@ -17,6 +17,7 @@ import ViewUserPredictions from './components/ViewUserPredictions';
 import AdminDataManager from './components/AdminDataManager';
 import AdminBonusOverview from './components/AdminBonusOverview';
 import AdminPredictionStats from './components/AdminPredictionStats';
+import AdminStalePenalties from './components/AdminStalePenalties';
 
 function BonusQuestions({ isAdmin }) {
   const { state, saveTopScorer, saveBonusField, locked } = useTournament();
@@ -349,6 +350,7 @@ function MainApp() {
             </section>
             <BonusQuestions isAdmin={true} />
             <AdminPredictionStats />
+            <AdminStalePenalties />
             <UserManager onViewUser={setViewUser} />
             <AdminBonusOverview />
             <AdminDataManager />
