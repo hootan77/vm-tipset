@@ -120,7 +120,11 @@ export function getMatchWinner(match) {
   if (isNaN(h) || isNaN(a)) return null;
   if (h > a) return match.home;
   if (a > h) return match.away;
-  if (h === a && match.penaltyWinner) return match.penaltyWinner;
+  // Only honour a penalty winner if it's actually one of the two current teams.
+  // Upstream changes can leave a stale penaltyWinner (a now-eliminated team) in storage.
+  if (h === a && (match.penaltyWinner === match.home || match.penaltyWinner === match.away)) {
+    return match.penaltyWinner;
+  }
   return null;
 }
 

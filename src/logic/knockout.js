@@ -29,6 +29,15 @@ function resolveSlot(slot, allGroupStandings, bestThirds) {
   return standings[slot.pos - 1]?.team || null;
 }
 
+// Only honour a penalty winner if it's actually one of the two current teams.
+// Upstream changes can replace the teams in a later match while a stale
+// penaltyWinner (a now-eliminated team) lingers in storage — ignore it.
+function validPenaltyWinner(match) {
+  return match.penaltyWinner && (match.penaltyWinner === match.home || match.penaltyWinner === match.away)
+    ? match.penaltyWinner
+    : null;
+}
+
 export function getMatchWinner(match) {
   if (match.homeGoals == null || match.awayGoals == null) return null;
   const h = parseInt(match.homeGoals, 10);
@@ -36,7 +45,7 @@ export function getMatchWinner(match) {
   if (isNaN(h) || isNaN(a)) return null;
   if (h > a) return match.home;
   if (a > h) return match.away;
-  if (h === a && match.penaltyWinner) return match.penaltyWinner;
+  if (h === a) return validPenaltyWinner(match);
   return null;
 }
 
@@ -47,8 +56,9 @@ export function getMatchLoser(match) {
   if (isNaN(h) || isNaN(a)) return null;
   if (h > a) return match.away;
   if (a > h) return match.home;
-  if (h === a && match.penaltyWinner) {
-    return match.penaltyWinner === match.home ? match.away : match.home;
+  const pen = validPenaltyWinner(match);
+  if (h === a && pen) {
+    return pen === match.home ? match.away : match.home;
   }
   return null;
 }
