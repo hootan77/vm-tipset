@@ -13,14 +13,15 @@ export default function Leaderboard({ onViewUser }) {
   const { t, lang } = useLanguage();
   const [data, setData] = useState([]);
   const [nextMatch, setNextMatch] = useState(null);
+  const [lastThreeMatches, setLastThreeMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState('Alla');
   const [orgFilter, setOrgFilter] = useState('Alla');
 
   function applyData(d) {
-    // Endpoint returns { players, nextMatch }; tolerate a bare array too
-    if (Array.isArray(d)) { setData(d); setNextMatch(null); }
-    else { setData(d.players || []); setNextMatch(d.nextMatch || null); }
+    // Endpoint returns { players, nextMatch, lastThreeMatches }; tolerate a bare array too
+    if (Array.isArray(d)) { setData(d); setNextMatch(null); setLastThreeMatches([]); }
+    else { setData(d.players || []); setNextMatch(d.nextMatch || null); setLastThreeMatches(d.lastThreeMatches || []); }
   }
 
   useEffect(() => {
@@ -49,6 +50,13 @@ export default function Leaderboard({ onViewUser }) {
     const ds = new Date(m.date + 'T00:00:00').toLocaleDateString(lang === 'sv' ? 'sv-SE' : 'en-US', { day: 'numeric', month: 'short' });
     return `${ds} ${m.time || ''}`.trim();
   };
+
+  const matchLabel = (m) => m ? `${getTeamName(m.home, lang)} ${m.homeGoals}–${m.awayGoals} ${getTeamName(m.away, lang)}` : '';
+  const pointBadgeClass = (pts) =>
+    pts == null ? 'bg-gray-100 text-gray-300'
+    : pts >= 5 ? 'bg-green-100 text-green-700'
+    : pts >= 2 ? 'bg-yellow-100 text-yellow-700'
+    : 'bg-red-100 text-red-500';
 
   const isAdmin = !!user?.isAdmin;
   const userOrgs = user?.org ? user.org.split(',') : [];
@@ -161,6 +169,18 @@ export default function Leaderboard({ onViewUser }) {
                 <th className="text-center py-3 px-4">{t('lb.col.exact')}</th>
                 <th className="text-center py-3 px-4">{t('lb.col.outcome')}</th>
                 <th className="text-center py-3 px-4">{t('lb.col.tips')}</th>
+                {lastThreeMatches.length > 0 && (
+                  <th className="text-center py-3 px-4 normal-case">
+                    <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{t('lb.lastThree')}</div>
+                    <div className="flex justify-center gap-1 mt-1">
+                      {lastThreeMatches.map((m, idx) => (
+                        <span key={idx} title={matchLabel(m)} className="text-[13px] cursor-help">
+                          {getFlag(m.home)}{getFlag(m.away)}
+                        </span>
+                      ))}
+                    </div>
+                  </th>
+                )}
                 {showViewButton && nextMatch && (
                   <th className="text-center py-3 px-4 normal-case">
                     <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{t('lb.nextMatch')}</div>
@@ -196,6 +216,24 @@ export default function Leaderboard({ onViewUser }) {
                   <td className="py-3 px-4 text-center text-gray-600">{row.exactResults}</td>
                   <td className="py-3 px-4 text-center text-gray-600">{row.correctOutcomes}</td>
                   <td className="py-3 px-4 text-center text-gray-400">{row.totalPredictions}/108</td>
+                  {lastThreeMatches.length > 0 && (
+                    <td className="py-3 px-4">
+                      <div className="flex justify-center gap-1">
+                        {lastThreeMatches.map((m, idx) => {
+                          const pts = row.lastThreePoints?.[idx];
+                          return (
+                            <span
+                              key={idx}
+                              title={matchLabel(m)}
+                              className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold ${pointBadgeClass(pts)}`}
+                            >
+                              {pts == null ? '–' : pts}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </td>
+                  )}
                   {showViewButton && nextMatch && (
                     <td className="py-3 px-4 text-center">
                       {row.nextMatchPrediction

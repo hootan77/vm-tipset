@@ -5,6 +5,19 @@ import { TEAMS, GROUP_NAMES, getGroupMatchesForGroup } from '../data/teams';
 import { getFlag, getTeamName } from '../data/flags';
 import { calculateStandings, sortStandings, getBestThirdPlaced } from '../logic/standings';
 import { buildRoundOf32, buildFullBracket } from '../logic/knockout';
+import { scoreGroupMatch, scoreKnockoutMatch } from '../logic/scoring';
+
+function PointsBadge({ points }) {
+  if (points == null) return null;
+  const cls = points >= 5 ? 'bg-green-100 text-green-700'
+    : points >= 2 ? 'bg-yellow-100 text-yellow-700'
+    : 'bg-red-100 text-red-500';
+  return (
+    <span className={`inline-flex items-center justify-center min-w-[1.6rem] px-1 py-0.5 rounded text-[10px] font-bold ${cls}`}>
+      {points}p
+    </span>
+  );
+}
 
 export default function ViewUserPredictions({ viewUser, onBack }) {
   const { t } = useLanguage();
@@ -163,17 +176,17 @@ export default function ViewUserPredictions({ viewUser, onBack }) {
             matches
           );
           return (
-            <ReadOnlyGroupCard key={group} group={group} matches={matches} standings={standings} />
+            <ReadOnlyGroupCard key={group} group={group} matches={matches} standings={standings} adminGroup={data.adminGroups?.[group]} />
           );
         })}
       </div>
 
-      <KnockoutSummary groupMatches={groupMatches} knockoutData={data.knockout} />
+      <KnockoutSummary groupMatches={groupMatches} knockoutData={data.knockout} adminKnockout={data.adminKnockout} />
     </div>
   );
 }
 
-function ReadOnlyGroupCard({ group, matches, standings }) {
+function ReadOnlyGroupCard({ group, matches, standings, adminGroup }) {
   const { t, lang } = useLanguage();
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
@@ -203,22 +216,32 @@ function ReadOnlyGroupCard({ group, matches, standings }) {
         </table>
 
         <div className="space-y-1">
-          {matches.map((m, i) => (
-            <div key={i} className="flex items-center gap-2 text-xs py-1 px-2 bg-gray-50 rounded">
-              <span className="flex-1 text-right truncate">{getFlag(m.home)} {getTeamName(m.home, lang)}</span>
-              <span className={`font-bold px-1 min-w-[2rem] text-center ${m.homeGoals != null ? 'text-gray-800' : 'text-gray-300'}`}>
-                {m.homeGoals ?? '-'} – {m.awayGoals ?? '-'}
-              </span>
-              <span className="flex-1 text-left truncate">{getFlag(m.away)} {getTeamName(m.away, lang)}</span>
-            </div>
-          ))}
+          {matches.map((m, i) => {
+            const actual = adminGroup?.[i];
+            const pts = (actual && actual.homeGoals != null && actual.awayGoals != null)
+              ? scoreGroupMatch(m, actual) : null;
+            return (
+              <div key={i} className="flex items-center gap-2 text-xs py-1 px-2 bg-gray-50 rounded">
+                <span className="flex-1 text-right truncate">{getFlag(m.home)} {getTeamName(m.home, lang)}</span>
+                <span className={`font-bold px-1 min-w-[2rem] text-center ${m.homeGoals != null ? 'text-gray-800' : 'text-gray-300'}`}>
+                  {m.homeGoals ?? '-'} – {m.awayGoals ?? '-'}
+                </span>
+                <span className="flex-1 text-left truncate">{getFlag(m.away)} {getTeamName(m.away, lang)}</span>
+                {pts != null && (
+                  <span title={`${t('predict.realResult')}: ${actual.homeGoals}–${actual.awayGoals}`}>
+                    <PointsBadge points={pts} />
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
 
-function KnockoutSummary({ groupMatches, knockoutData }) {
+function KnockoutSummary({ groupMatches, knockoutData, adminKnockout }) {
   const { t, lang } = useLanguage();
 
   // Build the full bracket from user's group predictions + knockout predictions
@@ -270,7 +293,11 @@ function KnockoutSummary({ groupMatches, knockoutData }) {
             <div key={round}>
               <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{roundLabels[round]}</h4>
               <div className="space-y-1">
-                {matches.map(m => (
+                {matches.map(m => {
+                  const actual = adminKnockout?.[m.id];
+                  const pts = (actual && actual.homeGoals != null && actual.awayGoals != null)
+                    ? scoreKnockoutMatch({ homeGoals: m.homeGoals, awayGoals: m.awayGoals }, actual) : null;
+                  return (
                   <div key={m.id} className="flex items-center gap-2 text-xs py-1.5 px-3 bg-gray-50 rounded-lg">
                     <span className="flex-1 text-right truncate font-medium">
                       {m.home ? `${getFlag(m.home)} ${getTeamName(m.home, lang)}` : '—'}
@@ -286,8 +313,14 @@ function KnockoutSummary({ groupMatches, knockoutData }) {
                         (pen: {getFlag(m.penaltyWinner)})
                       </span>
                     )}
+                    {pts != null && (
+                      <span title={`${t('predict.realResult')}: ${actual.homeGoals}–${actual.awayGoals}`}>
+                        <PointsBadge points={pts} />
+                      </span>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );

@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import db from './db.js';
 import { computeBracketFromData, getMatchWinner, GROUP_SCHEDULE, GROUP_NAMES } from './bracket.js';
+import { KNOCKOUT_SCHEDULE, ROUND_OF_32_BRACKET } from './teams-data.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -235,6 +236,20 @@ function kickoffTime(date, time) {
   return new Date(`${date}T${time || '00:00'}:00+02:00`).getTime();
 }
 
+// Scheduled date for a knockout match id
+function knockoutDate(matchId) {
+  if (matchId.startsWith('r32_')) return ROUND_OF_32_BRACKET[parseInt(matchId.split('_')[1])]?.date;
+  return KNOCKOUT_SCHEDULE[matchId]?.date;
+}
+
+// Points for a single match: 5 exact, 2 correct outcome, 0 wrong, null if missing
+function scorePair(pHome, pAway, aHome, aAway) {
+  if (pHome == null || pAway == null || aHome == null || aAway == null) return null;
+  if (pHome === aHome && pAway === aAway) return 5;
+  if (Math.sign(pHome - pAway) === Math.sign(aHome - aAway)) return 2;
+  return 0;
+}
+
 // The next group match to be decided: earliest by kickoff that has no admin result yet
 function computeNextGroupMatch(adminGroupMap) {
   let best = null;
@@ -273,6 +288,31 @@ app.get('/api/leaderboard', (_req, res) => {
   const adminBonus = db.prepare('SELECT first_red_card_nation, golden_glove FROM admin_bonus WHERE id = 1').get();
 
   const nextMatch = computeNextGroupMatch(adminGroupMap);
+
+  // The last 3 played matches (group + knockout with admin results), chronological
+  const playedMatches = [];
+  for (const group of GROUP_NAMES) {
+    const sched = GROUP_SCHEDULE[group] || [];
+    for (let i = 0; i < sched.length; i++) {
+      const r = adminGroupMap[group]?.[i];
+      if (r && r.homeGoals != null && r.awayGoals != null) {
+        playedMatches.push({ type: 'group', group, index: i, kickoff: kickoffTime(sched[i].date, sched[i].time), home: sched[i].home, away: sched[i].away, actual: r });
+      }
+    }
+  }
+  const adminKnockoutById = {};
+  for (const r of adminKnockoutRows) adminKnockoutById[r.match_id] = r;
+  for (const matches of Object.values(adminBracket)) {
+    for (const m of matches) {
+      const r = adminKnockoutById[m.id];
+      if (r && r.home_goals != null && r.away_goals != null) {
+        const d = knockoutDate(m.id);
+        playedMatches.push({ type: 'knockout', matchId: m.id, kickoff: d ? kickoffTime(d, '20:00') : 0, home: m.home, away: m.away, actual: { homeGoals: r.home_goals, awayGoals: r.away_goals } });
+      }
+    }
+  }
+  playedMatches.sort((a, b) => a.kickoff - b.kickoff);
+  const lastThree = playedMatches.slice(-3);
 
   const leaderboard = [];
 
@@ -415,6 +455,16 @@ app.get('/api/leaderboard', (_req, res) => {
       }
     }
 
+    const lastThreePoints = lastThree.map(pm => {
+      let pred = null;
+      if (pm.type === 'group') {
+        pred = userGroupRows.find(p => p.group_name === pm.group && p.match_index === pm.index);
+      } else {
+        pred = userKnockoutRows.find(p => p.match_id === pm.matchId);
+      }
+      return scorePair(pred?.home_goals, pred?.away_goals, pm.actual.homeGoals, pm.actual.awayGoals);
+    });
+
     leaderboard.push({
       id: user.id,
       name: user.display_name || user.name,
@@ -429,6 +479,7 @@ app.get('/api/leaderboard', (_req, res) => {
       totalPredictions,
       tiebreakerDiff,
       nextMatchPrediction,
+      lastThreePoints,
     });
   }
 
@@ -445,7 +496,12 @@ app.get('/api/leaderboard', (_req, res) => {
     ? { group: nextMatch.group, home: nextMatch.home, away: nextMatch.away, date: nextMatch.date, time: nextMatch.time, venue: nextMatch.venue }
     : null;
 
-  res.json({ players: leaderboard, nextMatch: nextMatchInfo });
+  const lastThreeMatches = lastThree.map(pm => ({
+    home: pm.home, away: pm.away,
+    homeGoals: pm.actual.homeGoals, awayGoals: pm.actual.awayGoals,
+  }));
+
+  res.json({ players: leaderboard, nextMatch: nextMatchInfo, lastThreeMatches });
 });
 
 // ── Top scorer ──
@@ -765,9 +821,25 @@ app.get('/api/users/:id/predictions', (req, res) => {
   for (const r of knockout) {
     knockoutMap[r.match_id] = { homeGoals: r.home_goals, awayGoals: r.away_goals, penaltyWinner: r.penalty_winner || null };
   }
+
+  // Admin results (facit) so the viewer can see points earned per match
+  const adminGroupRows = db.prepare('SELECT group_name, match_index, home_goals, away_goals FROM admin_group_results').all();
+  const adminGroups = {};
+  for (const r of adminGroupRows) {
+    if (!adminGroups[r.group_name]) adminGroups[r.group_name] = {};
+    adminGroups[r.group_name][r.match_index] = { homeGoals: r.home_goals, awayGoals: r.away_goals };
+  }
+  const adminKnockoutRows = db.prepare('SELECT match_id, home_goals, away_goals, penalty_winner FROM admin_knockout_results').all();
+  const adminKnockout = {};
+  for (const r of adminKnockoutRows) {
+    adminKnockout[r.match_id] = { homeGoals: r.home_goals, awayGoals: r.away_goals, penaltyWinner: r.penalty_winner || null };
+  }
+
   res.json({
     groups: groupMap,
     knockout: knockoutMap,
+    adminGroups,
+    adminKnockout,
     topScorer: topScorer?.player_name || '',
     firstRedCardNation: bonus?.first_red_card_nation || '',
     goldenGlove: bonus?.golden_glove || '',
