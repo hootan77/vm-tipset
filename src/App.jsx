@@ -150,15 +150,15 @@ function ScoringRulesButton() {
                 <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-sm">
                   <div className="flex justify-between"><span className="text-gray-600">{t('rules.r32')}</span><span className="font-bold text-emerald-600">5 {t('rules.perTeam')}</span></div>
                   <div className="flex justify-between"><span className="text-gray-600">{t('rules.r16')}</span><span className="font-bold text-emerald-600">5 {t('rules.perTeam')}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-600">{t('rules.qf')}</span><span className="font-bold text-emerald-600">5 {t('rules.perTeam')}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-600">{t('rules.sf')}</span><span className="font-bold text-emerald-600">10 {t('rules.perTeam')}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-600">{t('rules.qf')}</span><span className="font-bold text-emerald-600">10 {t('rules.perTeam')}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-600">{t('rules.sf')}</span><span className="font-bold text-emerald-600">15 {t('rules.perTeam')}</span></div>
                   <div className="flex justify-between"><span className="text-gray-600">{t('rules.final')}</span><span className="font-bold text-emerald-600">20 {t('rules.perTeam')}</span></div>
                 </div>
               </div>
               <div>
                 <h4 className="font-bold text-gray-800 mb-2">{t('rules.bonus')}</h4>
                 <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-sm">
-                  <div className="flex justify-between"><span className="text-gray-600">{t('rules.winner')}</span><span className="font-bold text-amber-600">40 {t('rules.points')}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-600">{t('rules.winner')}</span><span className="font-bold text-amber-600">50 {t('rules.points')}</span></div>
                   <div className="flex justify-between"><span className="text-gray-600">{t('rules.bronze')}</span><span className="font-bold text-amber-600">20 {t('rules.points')}</span></div>
                   <div className="flex justify-between"><span className="text-gray-600">{t('rules.redCard')}</span><span className="font-bold text-amber-600">20 {t('rules.points')}</span></div>
                   <div className="flex justify-between"><span className="text-gray-600">{t('rules.goldenGlove')}</span><span className="font-bold text-amber-600">40 {t('rules.points')}</span></div>

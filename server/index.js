@@ -373,7 +373,7 @@ app.get('/api/leaderboard', (_req, res) => {
     const allGroupsComplete = completedGroupPreds >= 72 && completedAdminGroups >= 72;
 
     if (allGroupsComplete) {
-      const roundPointsMap = { r32: 5, r16: 5, qf: 5, sf: 10, final: 20 };
+      const roundPointsMap = { r32: 5, r16: 5, qf: 10, sf: 15, final: 20 };
       for (const [round, pts] of Object.entries(roundPointsMap)) {
         const userTeams = getTeamsInRound(userBracket, round);
         const adminTeams = getTeamsInRound(adminBracket, round);
@@ -391,7 +391,7 @@ app.get('/api/leaderboard', (_req, res) => {
         const adminWinner = getMatchWinner(adminBracket.final[0]);
         if (adminWinner && userBracket.final?.[0]) {
           const userWinner = getMatchWinner(userBracket.final[0]);
-          if (userWinner === adminWinner) bonusPoints += 40;
+          if (userWinner === adminWinner) bonusPoints += 50;
         }
       }
 
