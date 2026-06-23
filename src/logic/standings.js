@@ -44,38 +44,80 @@ export function calculateStandings(teams, matches) {
   return table;
 }
 
+// Group ranking: points first, then the head-to-head mini-league among teams
+// level on points (head-to-head points -> GD -> goals), then overall GD -> goals,
+// then drawing of lots (deterministic alphabetical fallback, as we track no fair-play points).
 export function sortStandings(table, matches) {
   const rows = Object.values(table);
+  const byPoints = [...rows].sort((a, b) => b.points - a.points);
 
-  rows.sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
+  const result = [];
+  let i = 0;
+  while (i < byPoints.length) {
+    let j = i + 1;
+    while (j < byPoints.length && byPoints[j].points === byPoints[i].points) j++;
+    const cluster = byPoints.slice(i, j);
+    result.push(...(cluster.length === 1 ? cluster : resolveTie(cluster, matches)));
+    i = j;
+  }
 
-    // Head-to-head goal difference between the two teams takes priority over total GD
-    const h2hGD = getHeadToHeadGD(a.team, b.team, matches);
-    if (h2hGD !== 0) return -h2hGD; // higher head-to-head GD ranks first
-
-    if (b.gd !== a.gd) return b.gd - a.gd;
-    if (b.gf !== a.gf) return b.gf - a.gf;
-
-    return a.team.localeCompare(b.team);
-  });
-
-  return rows.map((row, i) => ({ ...row, position: i + 1 }));
+  return result.map((row, idx) => ({ ...row, position: idx + 1 }));
 }
 
-// Goal difference in matches between the two teams, from teamA's perspective
-function getHeadToHeadGD(teamA, teamB, matches) {
-  let gd = 0;
+// Mini-table (points/GD/goals) using only the matches between the given teams
+function headToHeadTable(cluster, matches) {
+  const set = new Set(cluster.map(r => r.team));
+  const mini = {};
+  for (const r of cluster) mini[r.team] = { points: 0, gf: 0, ga: 0 };
   for (const m of matches) {
     if (m.homeGoals == null || m.awayGoals == null) continue;
     const h = parseInt(m.homeGoals, 10);
     const a = parseInt(m.awayGoals, 10);
     if (isNaN(h) || isNaN(a)) continue;
-
-    if (m.home === teamA && m.away === teamB) gd += (h - a);
-    else if (m.home === teamB && m.away === teamA) gd += (a - h);
+    if (!set.has(m.home) || !set.has(m.away)) continue;
+    mini[m.home].gf += h; mini[m.home].ga += a;
+    mini[m.away].gf += a; mini[m.away].ga += h;
+    if (h > a) mini[m.home].points += 3;
+    else if (a > h) mini[m.away].points += 3;
+    else { mini[m.home].points += 1; mini[m.away].points += 1; }
   }
-  return gd;
+  for (const t in mini) mini[t].gd = mini[t].gf - mini[t].ga;
+  return mini;
+}
+
+// Resolve a set of teams level on overall points
+function resolveTie(cluster, matches) {
+  if (cluster.length === 1) return cluster;
+
+  const mini = headToHeadTable(cluster, matches);
+  const sorted = [...cluster].sort((a, b) =>
+    mini[b.team].points - mini[a.team].points ||
+    mini[b.team].gd - mini[a.team].gd ||
+    mini[b.team].gf - mini[a.team].gf
+  );
+
+  const result = [];
+  let i = 0;
+  while (i < sorted.length) {
+    let j = i + 1;
+    while (j < sorted.length &&
+      mini[sorted[j].team].points === mini[sorted[i].team].points &&
+      mini[sorted[j].team].gd === mini[sorted[i].team].gd &&
+      mini[sorted[j].team].gf === mini[sorted[i].team].gf) j++;
+    const sub = sorted.slice(i, j);
+    if (sub.length === 1) {
+      result.push(sub[0]);
+    } else if (sub.length === cluster.length) {
+      // Head-to-head couldn't separate them: fall back to overall GD -> goals -> lots
+      result.push(...[...sub].sort((a, b) =>
+        b.gd - a.gd || b.gf - a.gf || a.team.localeCompare(b.team)));
+    } else {
+      // Re-apply head-to-head to the still-level smaller subset
+      result.push(...resolveTie(sub, matches));
+    }
+    i = j;
+  }
+  return result;
 }
 
 export function getGroupAdvancers(sortedStandings) {
