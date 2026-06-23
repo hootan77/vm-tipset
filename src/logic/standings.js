@@ -49,11 +49,13 @@ export function sortStandings(table, matches) {
 
   rows.sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
+
+    // Head-to-head goal difference between the two teams takes priority over total GD
+    const h2hGD = getHeadToHeadGD(a.team, b.team, matches);
+    if (h2hGD !== 0) return -h2hGD; // higher head-to-head GD ranks first
+
     if (b.gd !== a.gd) return b.gd - a.gd;
     if (b.gf !== a.gf) return b.gf - a.gf;
-
-    const headToHead = getHeadToHead(a.team, b.team, matches);
-    if (headToHead !== 0) return headToHead;
 
     return a.team.localeCompare(b.team);
   });
@@ -61,23 +63,19 @@ export function sortStandings(table, matches) {
   return rows.map((row, i) => ({ ...row, position: i + 1 }));
 }
 
-function getHeadToHead(teamA, teamB, matches) {
+// Goal difference in matches between the two teams, from teamA's perspective
+function getHeadToHeadGD(teamA, teamB, matches) {
+  let gd = 0;
   for (const m of matches) {
     if (m.homeGoals == null || m.awayGoals == null) continue;
     const h = parseInt(m.homeGoals, 10);
     const a = parseInt(m.awayGoals, 10);
     if (isNaN(h) || isNaN(a)) continue;
 
-    if (m.home === teamA && m.away === teamB) {
-      if (h > a) return -1;
-      if (h < a) return 1;
-    }
-    if (m.home === teamB && m.away === teamA) {
-      if (h > a) return 1;
-      if (h < a) return -1;
-    }
+    if (m.home === teamA && m.away === teamB) gd += (h - a);
+    else if (m.home === teamB && m.away === teamA) gd += (a - h);
   }
-  return 0;
+  return gd;
 }
 
 export function getGroupAdvancers(sortedStandings) {
