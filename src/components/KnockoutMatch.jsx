@@ -53,7 +53,7 @@ export default function KnockoutMatch({ match, isAdmin, points }) {
     >
       {(match.matchNum || match.date) && (
         <div className="flex items-center justify-between px-2 py-0.5 text-[10px] text-gray-400 border-b border-gray-100">
-          <span>{match.matchNum ? `M${match.matchNum}` : ''} {match.date ? formatDate(match.date) : ''}</span>
+          <span>{match.matchNum ? <span className="font-semibold text-gray-500">{t('lb.match')} {match.matchNum}</span> : ''} {match.date ? formatDate(match.date) : ''}</span>
           <div className="flex items-center gap-1">
             {match.venue && <span className="truncate max-w-[80px]">{match.venue}</span>}
             {points !== undefined && points !== null && (

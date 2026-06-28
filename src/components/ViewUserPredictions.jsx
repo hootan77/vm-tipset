@@ -299,6 +299,7 @@ function KnockoutSummary({ groupMatches, knockoutData, adminKnockout }) {
                     ? scoreKnockoutMatch({ homeGoals: m.homeGoals, awayGoals: m.awayGoals }, actual) : null;
                   return (
                   <div key={m.id} className="flex items-center gap-2 text-xs py-1.5 px-3 bg-gray-50 rounded-lg">
+                    {m.matchNum && <span className="text-[10px] text-gray-400 font-semibold w-12 shrink-0">{t('lb.match')} {m.matchNum}</span>}
                     <span className="flex-1 text-right truncate font-medium">
                       {m.home ? `${getFlag(m.home)} ${getTeamName(m.home, lang)}` : '—'}
                     </span>

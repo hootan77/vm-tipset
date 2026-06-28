@@ -51,6 +51,11 @@ export default function Leaderboard({ onViewUser }) {
     return `${ds} ${m.time || ''}`.trim();
   };
 
+  const nextTeam = (team) => team ? `${getFlag(team)} ${getTeamName(team, lang)}` : t('lb.tbd');
+  const roundLabel = (round) => {
+    const map = { r32: t('ko.r32'), r16: t('ko.r16'), qf: t('ko.qf'), sf: t('ko.sf'), bronze: t('ko.bronze'), final: t('ko.final') };
+    return map[round] || '';
+  };
   const matchLabel = (m) => m ? `${getTeamName(m.home, lang)} ${m.homeGoals}–${m.awayGoals} ${getTeamName(m.away, lang)}` : '';
   const pointBadgeClass = (pts) =>
     pts == null ? 'bg-gray-100 text-gray-300'
@@ -183,11 +188,15 @@ export default function Leaderboard({ onViewUser }) {
                 )}
                 {showViewButton && nextMatch && (
                   <th className="text-center py-3 px-4 normal-case">
-                    <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{t('lb.nextMatch')}</div>
-                    <div className="text-xs font-semibold text-gray-700 whitespace-nowrap">
-                      {getFlag(nextMatch.home)} {getTeamName(nextMatch.home, lang)} – {getTeamName(nextMatch.away, lang)} {getFlag(nextMatch.away)}
+                    <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+                      {t('lb.nextMatch')}{nextMatch.matchNumber != null ? ` · ${t('lb.match')} ${nextMatch.matchNumber}` : ''}
                     </div>
-                    <div className="text-[10px] text-gray-400 font-normal normal-case">{formatKickoff(nextMatch)}</div>
+                    <div className="text-xs font-semibold text-gray-700 whitespace-nowrap">
+                      {nextTeam(nextMatch.home)} – {nextTeam(nextMatch.away)}
+                    </div>
+                    <div className="text-[10px] text-gray-400 font-normal normal-case">
+                      {nextMatch.round && nextMatch.round !== 'group' ? `${roundLabel(nextMatch.round)} · ` : ''}{formatKickoff(nextMatch)}
+                    </div>
                   </th>
                 )}
                 {showViewButton && onViewUser && (

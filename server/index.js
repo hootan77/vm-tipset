@@ -250,23 +250,51 @@ function scorePair(pHome, pAway, aHome, aAway) {
   return 0;
 }
 
-// The next group match to be decided: earliest by kickoff that has no admin result yet
-function computeNextGroupMatch(adminGroupMap) {
+// FIFA-style chronological match numbers 1..72 for the group stage (computed once)
+const GROUP_MATCH_NUMBER = (() => {
+  const list = [];
+  for (const group of GROUP_NAMES) {
+    (GROUP_SCHEDULE[group] || []).forEach((m, index) => {
+      list.push({ group, index, kickoff: kickoffTime(m.date, m.time) });
+    });
+  }
+  list.sort((a, b) => a.kickoff - b.kickoff || a.group.localeCompare(b.group) || a.index - b.index);
+  const map = {};
+  list.forEach((e, i) => { map[`${e.group}:${e.index}`] = i + 1; });
+  return map;
+})();
+
+function knockoutMatchNum(matchId) {
+  if (matchId.startsWith('r32_')) return ROUND_OF_32_BRACKET[parseInt(matchId.split('_')[1])]?.matchNum;
+  return KNOCKOUT_SCHEDULE[matchId]?.matchNum;
+}
+
+// The next match to be decided across group + knockout: the lowest-numbered match
+// (by official match number) that has no admin result yet.
+function computeNextMatch(adminGroupMap, adminBracket, adminKnockoutById) {
   let best = null;
+  const consider = (cand) => { if (cand.matchNumber != null && (best === null || cand.matchNumber < best.matchNumber)) best = cand; };
+
   for (const group of GROUP_NAMES) {
     const matches = GROUP_SCHEDULE[group] || [];
     for (let i = 0; i < matches.length; i++) {
-      const result = adminGroupMap[group]?.[i];
-      if (result && result.homeGoals != null && result.awayGoals != null) continue; // already played
-      const kickoff = kickoffTime(matches[i].date, matches[i].time);
-      if (best === null || kickoff < best.kickoff) {
-        best = {
-          group, matchIndex: i,
-          home: matches[i].home, away: matches[i].away,
-          date: matches[i].date, time: matches[i].time, venue: matches[i].venue,
-          kickoff,
-        };
-      }
+      const r = adminGroupMap[group]?.[i];
+      if (r && r.homeGoals != null && r.awayGoals != null) continue;
+      consider({
+        matchNumber: GROUP_MATCH_NUMBER[`${group}:${i}`], type: 'group', round: 'group',
+        group, matchIndex: i, home: matches[i].home, away: matches[i].away,
+        date: matches[i].date, time: matches[i].time, venue: matches[i].venue,
+      });
+    }
+  }
+  for (const matches of Object.values(adminBracket)) {
+    for (const m of matches) {
+      const r = adminKnockoutById[m.id];
+      if (r && r.home_goals != null && r.away_goals != null) continue;
+      consider({
+        matchNumber: knockoutMatchNum(m.id), type: 'knockout', round: m.round,
+        matchId: m.id, home: m.home, away: m.away, date: knockoutDate(m.id),
+      });
     }
   }
   return best;
@@ -287,7 +315,10 @@ app.get('/api/leaderboard', (_req, res) => {
   const adminTopScorer = db.prepare('SELECT player_name FROM admin_top_scorer WHERE id = 1').get();
   const adminBonus = db.prepare('SELECT first_red_card_nation, golden_glove FROM admin_bonus WHERE id = 1').get();
 
-  const nextMatch = computeNextGroupMatch(adminGroupMap);
+  const adminKnockoutById = {};
+  for (const r of adminKnockoutRows) adminKnockoutById[r.match_id] = r;
+
+  const nextMatch = computeNextMatch(adminGroupMap, adminBracket, adminKnockoutById);
 
   // The last 3 played matches (group + knockout with admin results), chronological
   const playedMatches = [];
@@ -300,8 +331,6 @@ app.get('/api/leaderboard', (_req, res) => {
       }
     }
   }
-  const adminKnockoutById = {};
-  for (const r of adminKnockoutRows) adminKnockoutById[r.match_id] = r;
   for (const matches of Object.values(adminBracket)) {
     for (const m of matches) {
       const r = adminKnockoutById[m.id];
@@ -449,7 +478,9 @@ app.get('/api/leaderboard', (_req, res) => {
 
     let nextMatchPrediction = null;
     if (nextMatch) {
-      const pred = userGroupRows.find(p => p.group_name === nextMatch.group && p.match_index === nextMatch.matchIndex);
+      const pred = nextMatch.type === 'group'
+        ? userGroupRows.find(p => p.group_name === nextMatch.group && p.match_index === nextMatch.matchIndex)
+        : userKnockoutRows.find(p => p.match_id === nextMatch.matchId);
       if (pred && pred.home_goals != null && pred.away_goals != null) {
         nextMatchPrediction = { homeGoals: pred.home_goals, awayGoals: pred.away_goals };
       }
@@ -493,7 +524,11 @@ app.get('/api/leaderboard', (_req, res) => {
   });
 
   const nextMatchInfo = nextMatch
-    ? { group: nextMatch.group, home: nextMatch.home, away: nextMatch.away, date: nextMatch.date, time: nextMatch.time, venue: nextMatch.venue }
+    ? {
+        matchNumber: nextMatch.matchNumber, type: nextMatch.type, round: nextMatch.round,
+        group: nextMatch.group ?? null, home: nextMatch.home, away: nextMatch.away,
+        date: nextMatch.date, time: nextMatch.time ?? null, venue: nextMatch.venue ?? null,
+      }
     : null;
 
   const lastThreeMatches = lastThree.map(pm => ({

@@ -109,6 +109,8 @@ const translations = {
     'lb.col.tips': 'Tips',
     'lb.nextMatch': 'Nästa match',
     'lb.lastThree': 'Senaste 3',
+    'lb.match': 'Match',
+    'lb.tbd': 'TBD',
 
     // Group stage
     'group.title': 'Grupp',
@@ -375,6 +377,8 @@ const translations = {
     'lb.col.tips': 'Tips',
     'lb.nextMatch': 'Next match',
     'lb.lastThree': 'Last 3',
+    'lb.match': 'Match',
+    'lb.tbd': 'TBD',
 
     // Group stage
     'group.title': 'Group',
