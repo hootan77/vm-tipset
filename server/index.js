@@ -269,11 +269,17 @@ function knockoutMatchNum(matchId) {
   return KNOCKOUT_SCHEDULE[matchId]?.matchNum;
 }
 
-// The next match to be decided across group + knockout: the lowest-numbered match
-// (by official match number) that has no admin result yet.
+// The next match to be decided across group + knockout: the earliest by kickoff time
+// that has no admin result yet (match number is a deterministic tiebreak for simultaneous matches).
 function computeNextMatch(adminGroupMap, adminBracket, adminKnockoutById) {
   let best = null;
-  const consider = (cand) => { if (cand.matchNumber != null && (best === null || cand.matchNumber < best.matchNumber)) best = cand; };
+  const consider = (cand) => {
+    if (cand.kickoff == null) return;
+    if (best === null || cand.kickoff < best.kickoff ||
+        (cand.kickoff === best.kickoff && (cand.matchNumber ?? Infinity) < (best.matchNumber ?? Infinity))) {
+      best = cand;
+    }
+  };
 
   for (const group of GROUP_NAMES) {
     const matches = GROUP_SCHEDULE[group] || [];
@@ -284,6 +290,7 @@ function computeNextMatch(adminGroupMap, adminBracket, adminKnockoutById) {
         matchNumber: GROUP_MATCH_NUMBER[`${group}:${i}`], type: 'group', round: 'group',
         group, matchIndex: i, home: matches[i].home, away: matches[i].away,
         date: matches[i].date, time: matches[i].time, venue: matches[i].venue,
+        kickoff: kickoffTime(matches[i].date, matches[i].time),
       });
     }
   }
@@ -291,9 +298,11 @@ function computeNextMatch(adminGroupMap, adminBracket, adminKnockoutById) {
     for (const m of matches) {
       const r = adminKnockoutById[m.id];
       if (r && r.home_goals != null && r.away_goals != null) continue;
+      const d = knockoutDate(m.id);
       consider({
         matchNumber: knockoutMatchNum(m.id), type: 'knockout', round: m.round,
-        matchId: m.id, home: m.home, away: m.away, date: knockoutDate(m.id),
+        matchId: m.id, home: m.home, away: m.away, date: d,
+        kickoff: d ? kickoffTime(d, '20:00') : null,
       });
     }
   }
