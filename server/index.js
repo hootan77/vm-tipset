@@ -236,10 +236,18 @@ function kickoffTime(date, time) {
   return new Date(`${date}T${time || '00:00'}:00+02:00`).getTime();
 }
 
-// Scheduled date for a knockout match id
+// Scheduled entry (date/time/venue) for a knockout match id
+function knockoutSchedule(matchId) {
+  if (matchId.startsWith('r32_')) return ROUND_OF_32_BRACKET[parseInt(matchId.split('_')[1])];
+  return KNOCKOUT_SCHEDULE[matchId];
+}
 function knockoutDate(matchId) {
-  if (matchId.startsWith('r32_')) return ROUND_OF_32_BRACKET[parseInt(matchId.split('_')[1])]?.date;
-  return KNOCKOUT_SCHEDULE[matchId]?.date;
+  return knockoutSchedule(matchId)?.date;
+}
+// Absolute kickoff (ms) for a knockout match, using its CEST date+time
+function knockoutKickoff(matchId) {
+  const s = knockoutSchedule(matchId);
+  return s?.date ? kickoffTime(s.date, s.time) : null;
 }
 
 // Points for a single match: 5 exact, 2 correct outcome, 0 wrong, null if missing
@@ -298,11 +306,11 @@ function computeNextMatch(adminGroupMap, adminBracket, adminKnockoutById) {
     for (const m of matches) {
       const r = adminKnockoutById[m.id];
       if (r && r.home_goals != null && r.away_goals != null) continue;
-      const d = knockoutDate(m.id);
+      const s = knockoutSchedule(m.id);
       consider({
         matchNumber: knockoutMatchNum(m.id), type: 'knockout', round: m.round,
-        matchId: m.id, home: m.home, away: m.away, date: d,
-        kickoff: d ? kickoffTime(d, '20:00') : null,
+        matchId: m.id, home: m.home, away: m.away, date: s?.date, time: s?.time,
+        kickoff: knockoutKickoff(m.id),
       });
     }
   }
@@ -344,8 +352,7 @@ app.get('/api/leaderboard', (_req, res) => {
     for (const m of matches) {
       const r = adminKnockoutById[m.id];
       if (r && r.home_goals != null && r.away_goals != null) {
-        const d = knockoutDate(m.id);
-        playedMatches.push({ type: 'knockout', matchId: m.id, kickoff: d ? kickoffTime(d, '20:00') : 0, home: m.home, away: m.away, actual: { homeGoals: r.home_goals, awayGoals: r.away_goals } });
+        playedMatches.push({ type: 'knockout', matchId: m.id, kickoff: knockoutKickoff(m.id) ?? 0, home: m.home, away: m.away, actual: { homeGoals: r.home_goals, awayGoals: r.away_goals } });
       }
     }
   }
