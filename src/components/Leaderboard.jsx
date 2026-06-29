@@ -17,6 +17,17 @@ export default function Leaderboard({ onViewUser }) {
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState('Alla');
   const [orgFilter, setOrgFilter] = useState('Alla');
+  const [sortKey, setSortKey] = useState(null); // null = default standings order
+  const [sortDir, setSortDir] = useState('desc');
+
+  function toggleSort(key) {
+    if (sortKey === key) {
+      setSortDir(d => (d === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setSortKey(key);
+      setSortDir(key === 'name' || key === 'role' ? 'asc' : 'desc');
+    }
+  }
 
   function applyData(d) {
     // Endpoint returns { players, nextMatch, lastThreeMatches }; tolerate a bare array too
@@ -91,6 +102,25 @@ export default function Leaderboard({ onViewUser }) {
     filtered = filtered.filter(r => r.role === roleFilter);
   }
 
+  // Assign standings rank from the (total-sorted) filtered order, then optionally re-sort
+  // by a chosen column for display — the rank/medal column keeps the true standings position.
+  const ranked = filtered.map((r, i) => ({ ...r, _rank: i + 1 }));
+  let displayed = ranked;
+  if (sortKey) {
+    displayed = [...ranked].sort((a, b) => {
+      if (sortKey === 'name' || sortKey === 'role') {
+        const av = (a[sortKey] || '').toLowerCase();
+        const bv = (b[sortKey] || '').toLowerCase();
+        return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      }
+      const av = a[sortKey] ?? 0;
+      const bv = b[sortKey] ?? 0;
+      return sortDir === 'asc' ? av - bv : bv - av;
+    });
+  }
+
+  const sortArrow = (key) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '');
+
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-md border border-gray-200 p-8 text-center">
@@ -164,16 +194,16 @@ export default function Leaderboard({ onViewUser }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase tracking-wider">
-                <th className="text-left py-3 px-4">{t('lb.col.rank')}</th>
-                <th className="text-left py-3 px-4">{t('lb.col.player')}</th>
-                <th className="text-left py-3 px-4">{t('lb.col.role')}</th>
-                <th className="text-center py-3 px-4">{t('lb.col.group')}</th>
-                <th className="text-center py-3 px-4">{t('lb.col.knockout')}</th>
-                <th className="text-center py-3 px-4">{t('lb.col.bonus')}</th>
-                <th className="text-center py-3 px-4 font-bold">{t('lb.col.total')}</th>
-                <th className="text-center py-3 px-4">{t('lb.col.exact')}</th>
-                <th className="text-center py-3 px-4">{t('lb.col.outcome')}</th>
-                <th className="text-center py-3 px-4">{t('lb.col.tips')}</th>
+                <th onClick={() => setSortKey(null)} className="text-left py-3 px-4 cursor-pointer hover:text-gray-700 select-none" title={t('lb.sortReset')}>{t('lb.col.rank')}</th>
+                <th onClick={() => toggleSort('name')} className="text-left py-3 px-4 cursor-pointer hover:text-gray-700 select-none">{t('lb.col.player')}{sortArrow('name')}</th>
+                <th onClick={() => toggleSort('role')} className="text-left py-3 px-4 cursor-pointer hover:text-gray-700 select-none">{t('lb.col.role')}{sortArrow('role')}</th>
+                <th onClick={() => toggleSort('groupPoints')} className="text-center py-3 px-4 cursor-pointer hover:text-gray-700 select-none">{t('lb.col.group')}{sortArrow('groupPoints')}</th>
+                <th onClick={() => toggleSort('knockoutPoints')} className="text-center py-3 px-4 cursor-pointer hover:text-gray-700 select-none">{t('lb.col.knockout')}{sortArrow('knockoutPoints')}</th>
+                <th onClick={() => toggleSort('bonusPoints')} className="text-center py-3 px-4 cursor-pointer hover:text-gray-700 select-none">{t('lb.col.bonus')}{sortArrow('bonusPoints')}</th>
+                <th onClick={() => toggleSort('total')} className="text-center py-3 px-4 font-bold cursor-pointer hover:text-gray-700 select-none">{t('lb.col.total')}{sortArrow('total')}</th>
+                <th onClick={() => toggleSort('exactResults')} className="text-center py-3 px-4 cursor-pointer hover:text-gray-700 select-none">{t('lb.col.exact')}{sortArrow('exactResults')}</th>
+                <th onClick={() => toggleSort('correctOutcomes')} className="text-center py-3 px-4 cursor-pointer hover:text-gray-700 select-none">{t('lb.col.outcome')}{sortArrow('correctOutcomes')}</th>
+                <th onClick={() => toggleSort('totalPredictions')} className="text-center py-3 px-4 cursor-pointer hover:text-gray-700 select-none">{t('lb.col.tips')}{sortArrow('totalPredictions')}</th>
                 {lastThreeMatches.length > 0 && (
                   <th className="text-center py-3 px-4 normal-case">
                     <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{t('lb.lastThree')}</div>
@@ -205,16 +235,17 @@ export default function Leaderboard({ onViewUser }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((row, i) => {
+              {displayed.map((row) => {
                 const clickable = showViewButton && onViewUser;
+                const rank = row._rank;
                 return (
                 <tr
                   key={row.id}
                   onClick={clickable ? () => onViewUser({ id: row.id, name: row.name }) : undefined}
-                  className={`border-b last:border-0 ${i === 0 ? 'bg-yellow-50' : i === 1 ? 'bg-gray-50' : i === 2 ? 'bg-orange-50' : ''} ${clickable ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                  className={`border-b last:border-0 ${rank === 1 ? 'bg-yellow-50' : rank === 2 ? 'bg-gray-50' : rank === 3 ? 'bg-orange-50' : ''} ${clickable ? 'cursor-pointer hover:bg-blue-50' : ''}`}
                 >
                   <td className="py-3 px-4">
-                    {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                    {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}
                   </td>
                   <td className="py-3 px-4 font-semibold text-gray-800">{row.name}</td>
                   <td className="py-3 px-4 text-gray-500 text-xs">{t(`role.${(row.role || 'Spelare').toLowerCase()}`) || row.role}</td>

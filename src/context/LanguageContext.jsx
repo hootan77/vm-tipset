@@ -111,6 +111,7 @@ const translations = {
     'lb.lastThree': 'Senaste 3',
     'lb.match': 'Match',
     'lb.tbd': 'TBD',
+    'lb.sortReset': 'Återställ sortering (ställning)',
 
     // Group stage
     'group.title': 'Grupp',
@@ -379,6 +380,7 @@ const translations = {
     'lb.lastThree': 'Last 3',
     'lb.match': 'Match',
     'lb.tbd': 'TBD',
+    'lb.sortReset': 'Reset sorting (standings)',
 
     // Group stage
     'group.title': 'Group',
