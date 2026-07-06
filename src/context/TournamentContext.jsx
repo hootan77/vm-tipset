@@ -5,7 +5,7 @@ import { buildRoundOf32, buildFullBracket } from '../logic/knockout';
 import { useAuth, API } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 
-const LOCK_DATE = new Date('2026-06-11T19:00:00Z'); // 21:00 svensk tid (CEST, UTC+2)
+const LOCK_DATE = new Date('2026-07-10T19:00:00Z'); // 21:00 svensk tid (CEST, UTC+2)
 
 const TournamentContext = createContext();
 
