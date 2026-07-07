@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db from './db.js';
-import { computeBracketFromData, getMatchWinner, GROUP_SCHEDULE, GROUP_NAMES } from './bracket.js';
+import { computeBracketFromData, getMatchWinner, GROUP_SCHEDULE, GROUP_NAMES, TEAMS, calculateStandings, sortStandings, getBestThirdPlaced, buildRoundOf32 } from './bracket.js';
 import { KNOCKOUT_SCHEDULE, ROUND_OF_32_BRACKET } from './teams-data.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -664,6 +664,221 @@ app.post('/api/admin/users/:userId/knockout', (req, res) => {
     hasPenalty: true,
   });
   res.json({ ok: true });
+});
+
+// ── Admin: win-probability simulation (Monte Carlo) ──
+
+const KNOCKOUT_ROUND_POINTS = { r32: 5, r16: 5, qf: 10, sf: 15, final: 20 };
+const ORG_LIST = ['Alla', 'Enskede', 'QBank', 'Friends', 'MNO'];
+const eqi = (a, b) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
+const randGoals = () => Math.floor(Math.random() * 4); // 0-3
+
+function teamsInRoundSet(bracket, round) {
+  const s = new Set();
+  for (const m of bracket[round] || []) { if (m.home) s.add(m.home); if (m.away) s.add(m.away); }
+  return s;
+}
+
+// Complete the admin facit: known results are fixed, undecided matches get random scorelines.
+function simulateScenario(adminGroupMap, adminKnockoutMap) {
+  const groupResults = {};
+  for (const group of GROUP_NAMES) {
+    groupResults[group] = {};
+    const matches = GROUP_SCHEDULE[group].map((m, i) => {
+      const known = adminGroupMap[group]?.[i];
+      let h, a;
+      if (known && known.homeGoals != null && known.awayGoals != null) { h = known.homeGoals; a = known.awayGoals; }
+      else { h = randGoals(); a = randGoals(); }
+      groupResults[group][i] = { homeGoals: h, awayGoals: a };
+      return { home: m.home, away: m.away, homeGoals: h, awayGoals: a };
+    });
+    groupResults[group]._matches = matches;
+  }
+  const standings = {};
+  for (const group of GROUP_NAMES) {
+    standings[group] = sortStandings(calculateStandings(TEAMS[group], groupResults[group]._matches), groupResults[group]._matches);
+  }
+  const bestThirds = getBestThirdPlaced(standings);
+  const r32 = buildRoundOf32(standings, bestThirds);
+
+  const knockoutResults = {};
+  const playMatch = (m) => {
+    const known = adminKnockoutMap[m.id];
+    let h, a, pw = null;
+    if (known && known.homeGoals != null && known.awayGoals != null) {
+      h = known.homeGoals; a = known.awayGoals; pw = known.penaltyWinner || null;
+      if (h === a && pw !== m.home && pw !== m.away) pw = (Math.random() < 0.5 ? m.home : m.away);
+    } else {
+      h = randGoals(); a = randGoals();
+    }
+    if (h === a && !pw) pw = (Math.random() < 0.5 ? m.home : m.away);
+    m.homeGoals = h; m.awayGoals = a; m.penaltyWinner = pw;
+    knockoutResults[m.id] = { homeGoals: h, awayGoals: a, penaltyWinner: pw };
+  };
+
+  const bracket = { r32 };
+  for (const m of r32) playMatch(m);
+  let prev = r32;
+  for (const rn of ['r16', 'qf', 'sf', 'final']) {
+    const next = [];
+    for (let i = 0; i < prev.length; i += 2) {
+      const home = getMatchWinner(prev[i]);
+      const away = i + 1 < prev.length ? getMatchWinner(prev[i + 1]) : null;
+      const m = { id: `${rn}_${i / 2}`, round: rn, home, away, homeGoals: null, awayGoals: null, penaltyWinner: null };
+      if (home && away) playMatch(m);
+      next.push(m);
+    }
+    bracket[rn] = next;
+    prev = next;
+  }
+  const loser = (mm) => { const w = getMatchWinner(mm); return !w ? null : (w === mm.home ? mm.away : mm.home); };
+  const sf = bracket.sf;
+  const bm = { id: 'bronze_0', round: 'bronze', home: sf[0] ? loser(sf[0]) : null, away: sf[1] ? loser(sf[1]) : null, homeGoals: null, awayGoals: null, penaltyWinner: null };
+  if (bm.home && bm.away) playMatch(bm);
+  bracket.bronze = [bm];
+
+  return {
+    groupResults, knockoutResults, bracket,
+    champion: bracket.final[0] ? getMatchWinner(bracket.final[0]) : null,
+    bronzeWinner: (bm.home && bm.away) ? getMatchWinner(bm) : null,
+  };
+}
+
+app.get('/api/admin/win-probabilities', (req, res) => {
+  if (!isAdminUser(req.query.adminId)) return res.status(403).json({ error: 'Endast admin' });
+  const sims = Math.min(Math.max(parseInt(req.query.sims) || 2000, 100), 5000);
+
+  const users = db.prepare("SELECT id, name, display_name, org FROM users WHERE is_admin = 0 AND deleted_at IS NULL").all();
+
+  // Known admin facit
+  const adminGroupMap = {};
+  for (const r of db.prepare('SELECT group_name, match_index, home_goals, away_goals FROM admin_group_results').all()) {
+    if (!adminGroupMap[r.group_name]) adminGroupMap[r.group_name] = {};
+    adminGroupMap[r.group_name][r.match_index] = { homeGoals: r.home_goals, awayGoals: r.away_goals };
+  }
+  const adminKnockoutMap = {};
+  for (const r of db.prepare('SELECT match_id, home_goals, away_goals, penalty_winner FROM admin_knockout_results').all()) {
+    adminKnockoutMap[r.match_id] = { homeGoals: r.home_goals, awayGoals: r.away_goals, penaltyWinner: r.penalty_winner || null };
+  }
+  const adminTopScorer = db.prepare('SELECT player_name FROM admin_top_scorer WHERE id = 1').get()?.player_name || '';
+  const adminBonus = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM admin_bonus WHERE id = 1').get() || {};
+
+  // Precompute each player's fixed data (their predictions never change across sims)
+  const players = users.map(u => {
+    const groupRows = db.prepare('SELECT group_name, match_index, home_goals, away_goals FROM group_predictions WHERE user_id = ?').all(u.id);
+    const knockoutRows = db.prepare('SELECT match_id, home_goals, away_goals, penalty_winner FROM knockout_predictions WHERE user_id = ?').all(u.id);
+    const ts = db.prepare('SELECT player_name FROM top_scorer_predictions WHERE user_id = ?').get(u.id);
+    const bonus = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM bonus_predictions WHERE user_id = ?').get(u.id) || {};
+    const overrideRows = db.prepare('SELECT field, awarded FROM bonus_overrides WHERE user_id = ?').all(u.id);
+    const overrides = {}; for (const r of overrideRows) overrides[r.field] = !!r.awarded;
+
+    const groupPreds = [];
+    for (const r of groupRows) if (r.home_goals != null && r.away_goals != null) groupPreds.push({ g: r.group_name, i: r.match_index, h: r.home_goals, a: r.away_goals });
+    const knockoutPreds = [];
+    for (const r of knockoutRows) if (r.home_goals != null && r.away_goals != null) knockoutPreds.push({ id: r.match_id, h: r.home_goals, a: r.away_goals });
+
+    const bracket = computeBracketFromData(groupRows, knockoutRows);
+    const teamsByRound = {};
+    for (const round of Object.keys(KNOCKOUT_ROUND_POINTS)) teamsByRound[round] = teamsInRoundSet(bracket, round);
+
+    return {
+      id: u.id, name: u.display_name || u.name, org: u.org || null,
+      groupPreds, knockoutPreds, teamsByRound,
+      groupComplete: groupPreds.length >= 72,
+      champion: bracket.final?.[0] ? getMatchWinner(bracket.final[0]) : null,
+      bronzeWinner: bracket.bronze?.[0] ? getMatchWinner(bracket.bronze[0]) : null,
+      topScorer: ts?.player_name || '', redCard: bonus.first_red_card_nation || '',
+      goldenGlove: bonus.golden_glove || '', tiebreaker: bonus.tiebreaker ?? null,
+      overrides,
+      wins: {}, // per-org fractional wins
+    };
+  });
+
+  // Distinct player answers to sample an undecided bonus "truth" from
+  const distinct = (vals) => [...new Set(vals.filter(Boolean))];
+  const tsPool = distinct(players.map(p => p.topScorer));
+  const rcPool = distinct(players.map(p => p.redCard));
+  const ggPool = distinct(players.map(p => p.goldenGlove));
+  const tbPool = players.map(p => p.tiebreaker).filter(v => v != null);
+  const pick = (arr) => arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
+
+  for (const org of ORG_LIST) {
+    for (const p of players) p.wins[org] = 0;
+  }
+  const orgMembers = {};
+  for (const org of ORG_LIST) {
+    orgMembers[org] = org === 'Alla' ? players : players.filter(p => p.org && p.org.split(',').includes(org));
+  }
+
+  for (let s = 0; s < sims; s++) {
+    const sc = simulateScenario(adminGroupMap, adminKnockoutMap);
+    const adminTeams = {};
+    for (const round of Object.keys(KNOCKOUT_ROUND_POINTS)) adminTeams[round] = teamsInRoundSet(sc.bracket, round);
+    const truth = {
+      topScorer: adminTopScorer || pick(tsPool),
+      redCard: adminBonus.first_red_card_nation || pick(rcPool),
+      goldenGlove: adminBonus.golden_glove || pick(ggPool),
+      tiebreaker: adminBonus.tiebreaker ?? pick(tbPool),
+    };
+
+    // Score every player for this scenario
+    for (const p of players) {
+      let total = 0, exact = 0;
+      for (const gp of p.groupPreds) {
+        const act = sc.groupResults[gp.g][gp.i];
+        if (gp.h === act.homeGoals && gp.a === act.awayGoals) { total += 5; exact++; }
+        else if (Math.sign(gp.h - gp.a) === Math.sign(act.homeGoals - act.awayGoals)) total += 2;
+      }
+      for (const kp of p.knockoutPreds) {
+        const act = sc.knockoutResults[kp.id];
+        if (!act) continue;
+        if (kp.h === act.homeGoals && kp.a === act.awayGoals) { total += 5; exact++; }
+        else if (Math.sign(kp.h - kp.a) === Math.sign(act.homeGoals - act.awayGoals)) total += 2;
+      }
+      if (p.groupComplete) {
+        for (const round of Object.keys(KNOCKOUT_ROUND_POINTS)) {
+          const at = adminTeams[round];
+          for (const team of p.teamsByRound[round]) if (at.has(team)) total += KNOCKOUT_ROUND_POINTS[round];
+        }
+        if (p.champion && p.champion === sc.champion) total += 50;
+        if (p.bronzeWinner && p.bronzeWinner === sc.bronzeWinner) total += 20;
+      }
+      if (p.overrides.topScorer || eqi(p.topScorer, truth.topScorer)) total += 50;
+      if (p.overrides.firstRedCardNation || eqi(p.redCard, truth.redCard)) total += 20;
+      if (p.overrides.goldenGlove || eqi(p.goldenGlove, truth.goldenGlove)) total += 40;
+      const tdiff = (p.tiebreaker != null && truth.tiebreaker != null) ? Math.abs(p.tiebreaker - truth.tiebreaker) : Infinity;
+      p._total = total; p._exact = exact; p._tdiff = tdiff;
+    }
+
+    // Winner per org (total desc, exact desc, tiebreakerDiff asc); split ties fractionally
+    for (const org of ORG_LIST) {
+      const members = orgMembers[org];
+      if (!members.length) continue;
+      let best = null, winners = [];
+      for (const p of members) {
+        const key = [p._total, p._exact, -p._tdiff];
+        if (!best || key[0] > best[0] || (key[0] === best[0] && (key[1] > best[1] || (key[1] === best[1] && key[2] > best[2])))) {
+          best = key; winners = [p];
+        } else if (key[0] === best[0] && key[1] === best[1] && key[2] === best[2]) {
+          winners.push(p);
+        }
+      }
+      const share = 1 / winners.length;
+      for (const w of winners) w.wins[org] += share;
+    }
+  }
+
+  // Current points (from a single no-simulation pass is complex; report win% and current standings order)
+  const result = {};
+  for (const org of ORG_LIST) {
+    const members = orgMembers[org];
+    if (!members.length) continue;
+    result[org] = members
+      .map(p => ({ id: p.id, name: p.name, winPct: (p.wins[org] / sims) * 100 }))
+      .sort((a, b) => b.winPct - a.winPct);
+  }
+
+  res.json({ sims, orgs: result });
 });
 
 // ── Admin data management ──

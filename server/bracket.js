@@ -197,6 +197,19 @@ function applyPredictions(matches, predictions) {
   });
 }
 
+function getMatchLoser(match) {
+  if (match.homeGoals == null || match.awayGoals == null) return null;
+  const h = parseInt(match.homeGoals, 10);
+  const a = parseInt(match.awayGoals, 10);
+  if (isNaN(h) || isNaN(a)) return null;
+  if (h > a) return match.away;
+  if (a > h) return match.home;
+  if (h === a && (match.penaltyWinner === match.home || match.penaltyWinner === match.away)) {
+    return match.penaltyWinner === match.home ? match.away : match.home;
+  }
+  return null;
+}
+
 export function buildFullBracket(r32Matches, knockoutPredictions) {
   const rounds = { r32: applyPredictions(r32Matches, knockoutPredictions) };
   const roundOrder = ['r16', 'qf', 'sf', 'final'];
@@ -206,6 +219,15 @@ export function buildFullBracket(r32Matches, knockoutPredictions) {
     rounds[roundName] = applyPredictions(nextRound, knockoutPredictions);
     prev = rounds[roundName];
   }
+  // Match for third place: losers of the two semi-finals
+  const sf = rounds.sf;
+  const bronze = {
+    id: 'bronze_0', round: 'bronze',
+    home: sf?.[0] ? getMatchLoser(sf[0]) : null,
+    away: sf?.[1] ? getMatchLoser(sf[1]) : null,
+    homeGoals: null, awayGoals: null,
+  };
+  rounds.bronze = applyPredictions([bronze], knockoutPredictions);
   return rounds;
 }
 

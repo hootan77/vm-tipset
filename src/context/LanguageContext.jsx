@@ -236,6 +236,17 @@ const translations = {
     'ps.noData': 'Ingen data ännu',
     'ps.incompleteNote': 'En spelare räknas för mästare/finalister så snart deras slutspelsträd löser sig fram till en final med vinnare.',
 
+    // Win probabilities (admin)
+    'wp.title': 'Vinstsannolikhet',
+    'wp.subtitle': 'Chans att vinna tipset per organisation (Monte Carlo)',
+    'wp.compute': 'Beräkna',
+    'wp.computing': 'Beräknar…',
+    'wp.simsWord': 'simuleringar',
+    'wp.simsRan': 'simuleringar körda',
+    'wp.hint': 'Klicka på "Beräkna" för att simulera resten av VM och räkna ut vinstsannolikheter.',
+    'wp.error': 'Något gick fel vid beräkningen.',
+    'wp.note': 'Baserat på inmatat facit; oavgjorda matcher simuleras slumpmässigt enligt appens poängregler.',
+
     // Stale penalty winners (admin fix tool)
     'sp.title': 'Felaktiga slutspelsträd',
     'sp.subtitle': 'Spelare med en straffvinnare som inte längre är med i matchen',
@@ -505,6 +516,17 @@ const translations = {
     'ps.players': 'players',
     'ps.noData': 'No data yet',
     'ps.incompleteNote': 'A player is counted for champion/finalists as soon as their bracket resolves to a final with a winner.',
+
+    // Win probabilities (admin)
+    'wp.title': 'Win probability',
+    'wp.subtitle': 'Chance to win the pool per organisation (Monte Carlo)',
+    'wp.compute': 'Calculate',
+    'wp.computing': 'Calculating…',
+    'wp.simsWord': 'simulations',
+    'wp.simsRan': 'simulations run',
+    'wp.hint': 'Click "Calculate" to simulate the rest of the World Cup and estimate win probabilities.',
+    'wp.error': 'Something went wrong during the calculation.',
+    'wp.note': 'Based on entered results; undecided matches are simulated at random using the app scoring rules.',
 
     // Stale penalty winners (admin fix tool)
     'sp.title': 'Broken knockout trees',
