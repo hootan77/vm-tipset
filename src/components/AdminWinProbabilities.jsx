@@ -11,6 +11,10 @@ export default function AdminWinProbabilities() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sims, setSims] = useState(2000);
+  const [round, setRound] = useState('final');
+
+  const KO_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'final'];
+  const roundLabel = (rn) => (rn === 'final' ? t('wp.champion') : { r32: t('ko.r32'), r16: t('ko.r16'), qf: t('ko.qf'), sf: t('ko.sf') }[rn]);
 
   const run = async () => {
     setLoading(true);
@@ -58,25 +62,43 @@ export default function AdminWinProbabilities() {
           <>
             <p className="text-xs text-gray-400 mb-3">{data.sims} {t('wp.simsRan')} · {t('wp.note')}</p>
 
-            {data.qfTeams?.length > 0 && (
+            {data.roundWinners && (
               <div className="mb-4 border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-3 py-2 font-semibold text-sm border-b border-gray-200">🏆 {t('wp.qfTitle')}</div>
-                <ul className="p-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
-                  {data.qfTeams.map(q => {
-                    const max = Math.max(...data.qfTeams.map(x => x.pct), 1);
-                    return (
-                      <li key={q.team} className="flex items-center gap-2">
-                        <span className="w-32 truncate text-xs text-gray-700 shrink-0">{getFlag(q.team)} {getTeamName(q.team, lang)}</span>
-                        <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden">
-                          <div className="h-full bg-amber-500/80 rounded" style={{ width: `${(q.pct / max) * 100}%` }} />
-                        </div>
-                        <span className="w-20 text-right text-xs font-semibold text-gray-700 shrink-0" title={`${q.wins} / ${data.sims}`}>
-                          {q.wins} <span className="font-normal text-gray-400">({q.pct.toFixed(0)}%)</span>
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between gap-2 flex-wrap">
+                  <span className="font-semibold text-sm">🏆 {t('wp.roundTitle')}</span>
+                  <div className="flex gap-1 flex-wrap">
+                    {KO_ROUNDS.filter(rn => data.roundWinners[rn]?.length).map(rn => (
+                      <button
+                        key={rn}
+                        onClick={() => setRound(rn)}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                          round === rn ? 'bg-amber-500 text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+                        }`}
+                      >
+                        {roundLabel(rn)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {(() => {
+                  const list = data.roundWinners[round] || [];
+                  const max = Math.max(...list.map(x => x.pct), 1);
+                  return (
+                    <ul className="p-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+                      {list.map(q => (
+                        <li key={q.team} className="flex items-center gap-2">
+                          <span className="w-32 truncate text-xs text-gray-700 shrink-0">{getFlag(q.team)} {getTeamName(q.team, lang)}</span>
+                          <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden">
+                            <div className="h-full bg-amber-500/80 rounded" style={{ width: `${(q.pct / max) * 100}%` }} />
+                          </div>
+                          <span className="w-20 text-right text-xs font-semibold text-gray-700 shrink-0" title={`${q.wins} / ${data.sims}`}>
+                            {q.wins} <span className="font-normal text-gray-400">({q.pct.toFixed(0)}%)</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                })()}
               </div>
             )}
 

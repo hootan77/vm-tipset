@@ -811,17 +811,20 @@ app.get('/api/admin/win-probabilities', (req, res) => {
     orgMembers[org] = org === 'Alla' ? players : players.filter(p => p.org && p.org.split(',').includes(org));
   }
 
-  const qfWins = {}; // team -> number of sims it won its quarter-final
+  const KO_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'final'];
+  const roundWins = {}; for (const rn of KO_ROUNDS) roundWins[rn] = {}; // round -> team -> sims won
 
   for (let s = 0; s < sims; s++) {
     const sc = simulateScenario(adminGroupMap, adminKnockoutMap);
     const adminTeams = {};
     for (const round of Object.keys(KNOCKOUT_ROUND_POINTS)) adminTeams[round] = teamsInRoundSet(sc.bracket, round);
 
-    // Track quarter-final winners (teams that advanced from QF to SF)
-    for (const m of sc.bracket.qf || []) {
-      const w = getMatchWinner(m);
-      if (w) qfWins[w] = (qfWins[w] || 0) + 1;
+    // Track winners in every knockout round (final winner = world champion)
+    for (const rn of KO_ROUNDS) {
+      for (const m of sc.bracket[rn] || []) {
+        const w = getMatchWinner(m);
+        if (w) roundWins[rn][w] = (roundWins[rn][w] || 0) + 1;
+      }
     }
     const truth = {
       topScorer: adminTopScorer || pick(tsPool),
@@ -897,11 +900,14 @@ app.get('/api/admin/win-probabilities', (req, res) => {
       .sort((a, b) => b.winPct - a.winPct || b.avgPoints - a.avgPoints);
   }
 
-  const qfTeams = Object.entries(qfWins)
-    .map(([team, wins]) => ({ team, wins, pct: (wins / sims) * 100 }))
-    .sort((a, b) => b.wins - a.wins);
+  const roundWinners = {};
+  for (const rn of KO_ROUNDS) {
+    roundWinners[rn] = Object.entries(roundWins[rn])
+      .map(([team, wins]) => ({ team, wins, pct: (wins / sims) * 100 }))
+      .sort((a, b) => b.wins - a.wins);
+  }
 
-  res.json({ sims, orgs: result, qfTeams });
+  res.json({ sims, orgs: result, roundWinners });
 });
 
 // ── Admin data management ──
