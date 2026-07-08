@@ -249,6 +249,10 @@ const translations = {
     'wp.roundTitle': 'Vinnare per rond (antal simuleringar)',
     'wp.champion': 'VM-vinnare',
     'wp.range': 'Intervall (10:e–90:e percentilen)',
+    'wp.oddsLabel': 'Odds (valfritt) — viktar matchvinnare',
+    'wp.oddsPlaceholder': 'Ett lag per rad, t.ex. "France 15/8"',
+    'wp.oddsHint': 'Ett lag + odds per rad (bråkodds som 15/8 eller heltal som 4 = 4/1). Lämna tomt för jämn slump. Lag utan odds spelas jämnt.',
+    'wp.oddsUnmatched': 'Kunde inte tolka',
 
     // Stale penalty winners (admin fix tool)
     'sp.title': 'Felaktiga slutspelsträd',
@@ -533,6 +537,10 @@ const translations = {
     'wp.roundTitle': 'Winners per round (number of simulations)',
     'wp.champion': 'World champion',
     'wp.range': 'Range (10th–90th percentile)',
+    'wp.oddsLabel': 'Odds (optional) — weights match winners',
+    'wp.oddsPlaceholder': 'One team per line, e.g. "France 15/8"',
+    'wp.oddsHint': 'One team + odds per line (fractional like 15/8, or an integer like 4 = 4/1). Leave empty for even random. Teams without odds are played evenly.',
+    'wp.oddsUnmatched': 'Could not parse',
 
     // Stale penalty winners (admin fix tool)
     'sp.title': 'Broken knockout trees',

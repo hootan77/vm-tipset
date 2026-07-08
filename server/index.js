@@ -680,7 +680,8 @@ function teamsInRoundSet(bracket, round) {
 }
 
 // Complete the admin facit: known results are fixed, undecided matches get random scorelines.
-function simulateScenario(adminGroupMap, adminKnockoutMap) {
+// `strength` (team -> implied win prob) weights knockout winners when both teams are listed.
+function simulateScenario(adminGroupMap, adminKnockoutMap, strength) {
   const groupResults = {};
   for (const group of GROUP_NAMES) {
     groupResults[group] = {};
@@ -709,7 +710,21 @@ function simulateScenario(adminGroupMap, adminKnockoutMap) {
       h = known.homeGoals; a = known.awayGoals; pw = known.penaltyWinner || null;
       if (h === a && pw !== m.home && pw !== m.away) pw = (Math.random() < 0.5 ? m.home : m.away);
     } else {
-      h = randGoals(); a = randGoals();
+      const sH = strength?.[m.home], sA = strength?.[m.away];
+      if (sH != null && sA != null && sH + sA > 0) {
+        // Odds-weighted: choose the winner by relative strength, then a plausible scoreline
+        const winner = Math.random() < sH / (sH + sA) ? m.home : m.away;
+        if (Math.random() < 0.25) { // decided on penalties
+          const g = 1 + Math.floor(Math.random() * 2);
+          h = g; a = g; pw = winner;
+        } else {
+          const wg = 1 + Math.floor(Math.random() * 3);
+          const lg = Math.floor(Math.random() * wg);
+          if (winner === m.home) { h = wg; a = lg; } else { h = lg; a = wg; }
+        }
+      } else {
+        h = randGoals(); a = randGoals();
+      }
     }
     if (h === a && !pw) pw = (Math.random() < 0.5 ? m.home : m.away);
     m.homeGoals = h; m.awayGoals = a; m.penaltyWinner = pw;
@@ -744,9 +759,11 @@ function simulateScenario(adminGroupMap, adminKnockoutMap) {
   };
 }
 
-app.get('/api/admin/win-probabilities', (req, res) => {
-  if (!isAdminUser(req.query.adminId)) return res.status(403).json({ error: 'Endast admin' });
-  const sims = Math.min(Math.max(parseInt(req.query.sims) || 2000, 100), 5000);
+app.post('/api/admin/win-probabilities', (req, res) => {
+  if (!isAdminUser(req.body.adminId)) return res.status(403).json({ error: 'Endast admin' });
+  const sims = Math.min(Math.max(parseInt(req.body.sims) || 2000, 100), 5000);
+  // Optional odds-based strengths: { swedishTeamName: impliedProbability }
+  const strength = (req.body.odds && typeof req.body.odds === 'object') ? req.body.odds : null;
 
   const users = db.prepare("SELECT id, name, display_name, org FROM users WHERE is_admin = 0 AND deleted_at IS NULL").all();
 
@@ -815,7 +832,7 @@ app.get('/api/admin/win-probabilities', (req, res) => {
   const roundWins = {}; for (const rn of KO_ROUNDS) roundWins[rn] = {}; // round -> team -> sims won
 
   for (let s = 0; s < sims; s++) {
-    const sc = simulateScenario(adminGroupMap, adminKnockoutMap);
+    const sc = simulateScenario(adminGroupMap, adminKnockoutMap, strength);
     const adminTeams = {};
     for (const round of Object.keys(KNOCKOUT_ROUND_POINTS)) adminTeams[round] = teamsInRoundSet(sc.bracket, round);
 

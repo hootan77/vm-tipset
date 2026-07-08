@@ -1,9 +1,40 @@
 import { useState } from 'react';
 import { API, useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { getFlag, getTeamName } from '../data/flags';
+import { getFlag, getTeamName, TEAM_NAMES_EN } from '../data/flags';
+import { TEAMS } from '../data/teams';
 
 const ORG_ORDER = ['Alla', 'Enskede', 'QBank', 'Friends', 'MNO'];
+
+// Resolve a team name (Swedish or English, case-insensitive) to the app's Swedish name
+const NAME_TO_SV = (() => {
+  const map = {};
+  for (const group of Object.values(TEAMS)) for (const sv of group) {
+    map[sv.toLowerCase()] = sv;
+    const en = TEAM_NAMES_EN[sv];
+    if (en) map[en.toLowerCase()] = sv;
+  }
+  return map;
+})();
+const resolveTeam = (name) => NAME_TO_SV[name.trim().toLowerCase()] || null;
+
+// Fractional (a/b or n) or decimal odds -> decimal odds
+function oddsToDecimal(str) {
+  str = str.trim();
+  if (str.includes('/')) { const [n, d] = str.split('/').map(Number); return d ? n / d + 1 : null; }
+  const num = Number(str);
+  if (!isFinite(num) || num <= 0) return null;
+  return Number.isInteger(num) ? num + 1 : num; // bare integer = fractional to-1
+}
+
+const DEFAULT_ODDS = `France 15/8
+Argentina 4
+Spain 7/2
+England 5
+Morocco 33
+Norway 16
+Belgium 33
+Switzerland 33`;
 
 export default function AdminWinProbabilities() {
   const { t, lang } = useLanguage();
@@ -12,14 +43,37 @@ export default function AdminWinProbabilities() {
   const [loading, setLoading] = useState(false);
   const [sims, setSims] = useState(2000);
   const [round, setRound] = useState('final');
+  const [oddsText, setOddsText] = useState(DEFAULT_ODDS);
+  const [unmatched, setUnmatched] = useState([]);
 
   const KO_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'final'];
   const roundLabel = (rn) => (rn === 'final' ? t('wp.champion') : { r32: t('ko.r32'), r16: t('ko.r16'), qf: t('ko.qf'), sf: t('ko.sf') }[rn]);
 
+  const parseOdds = () => {
+    const odds = {};
+    const bad = [];
+    for (const line of oddsText.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const parts = trimmed.split(/\s+/);
+      const dec = oddsToDecimal(parts[parts.length - 1]);
+      const sv = resolveTeam(parts.slice(0, -1).join(' '));
+      if (!sv || !dec) { bad.push(trimmed); continue; }
+      odds[sv] = 1 / dec; // implied probability
+    }
+    return { odds, bad };
+  };
+
   const run = async () => {
     setLoading(true);
+    const { odds, bad } = parseOdds();
+    setUnmatched(bad);
     try {
-      const res = await fetch(`${API}/admin/win-probabilities?adminId=${user?.id}&sims=${sims}`);
+      const res = await fetch(`${API}/admin/win-probabilities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminId: user?.id, sims, odds: Object.keys(odds).length ? odds : null }),
+      });
       setData(await res.json());
     } catch {
       setData({ error: true });
@@ -51,6 +105,22 @@ export default function AdminWinProbabilities() {
             {loading ? t('wp.computing') : t('wp.compute')}
           </button>
         </div>
+      </div>
+
+      <div className="px-4 pt-4">
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{t('wp.oddsLabel')}</label>
+        <textarea
+          value={oddsText}
+          onChange={e => setOddsText(e.target.value)}
+          rows={4}
+          spellCheck={false}
+          placeholder={t('wp.oddsPlaceholder')}
+          className="w-full text-xs font-mono border border-gray-300 rounded-lg px-2 py-1.5 outline-none focus:ring-1 focus:ring-fuchsia-500"
+        />
+        <p className="text-[11px] text-gray-400 mt-1">{t('wp.oddsHint')}</p>
+        {unmatched.length > 0 && (
+          <p className="text-[11px] text-amber-600 mt-1">{t('wp.oddsUnmatched')}: {unmatched.join(', ')}</p>
+        )}
       </div>
 
       <div className="p-4">

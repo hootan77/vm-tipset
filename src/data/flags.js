@@ -49,7 +49,7 @@ const FLAGS = {
   'Panama': '\u{1F1F5}\u{1F1E6}',
 };
 
-const TEAM_NAMES_EN = {
+export const TEAM_NAMES_EN = {
   'Mexiko': 'Mexico',
   'Sydafrika': 'South Africa',
   'Sydkorea': 'South Korea',
