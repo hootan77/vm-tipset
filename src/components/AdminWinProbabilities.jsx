@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { API, useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { getFlag, getTeamName } from '../data/flags';
 
 const ORG_ORDER = ['Alla', 'Enskede', 'QBank', 'Friends', 'MNO'];
 
 export default function AdminWinProbabilities() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -56,6 +57,29 @@ export default function AdminWinProbabilities() {
         ) : (
           <>
             <p className="text-xs text-gray-400 mb-3">{data.sims} {t('wp.simsRan')} · {t('wp.note')}</p>
+
+            {data.qfTeams?.length > 0 && (
+              <div className="mb-4 border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-gray-50 px-3 py-2 font-semibold text-sm border-b border-gray-200">🏆 {t('wp.qfTitle')}</div>
+                <ul className="p-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+                  {data.qfTeams.map(q => {
+                    const max = Math.max(...data.qfTeams.map(x => x.pct), 1);
+                    return (
+                      <li key={q.team} className="flex items-center gap-2">
+                        <span className="w-32 truncate text-xs text-gray-700 shrink-0">{getFlag(q.team)} {getTeamName(q.team, lang)}</span>
+                        <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden">
+                          <div className="h-full bg-amber-500/80 rounded" style={{ width: `${(q.pct / max) * 100}%` }} />
+                        </div>
+                        <span className="w-20 text-right text-xs font-semibold text-gray-700 shrink-0" title={`${q.wins} / ${data.sims}`}>
+                          {q.wins} <span className="font-normal text-gray-400">({q.pct.toFixed(0)}%)</span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {ORG_ORDER.filter(o => data.orgs?.[o]?.length).map(org => {
                 const list = data.orgs[org];
@@ -69,14 +93,20 @@ export default function AdminWinProbabilities() {
                     <ul className="p-2 space-y-1.5">
                       {list.map(p => (
                         <li key={p.id} className="flex items-center gap-2">
-                          <span className="w-28 sm:w-32 truncate text-xs text-gray-700 shrink-0">{p.name}</span>
+                          <span className="w-24 sm:w-28 truncate text-xs text-gray-700 shrink-0">{p.name}</span>
                           <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden">
                             <div
                               className={`h-full rounded ${p.winPct > 0 ? 'bg-fuchsia-500/80' : ''}`}
                               style={{ width: `${(p.winPct / max) * 100}%` }}
                             />
                           </div>
-                          <span className="w-14 text-right text-xs font-semibold text-gray-700 shrink-0">{p.winPct.toFixed(1)}%</span>
+                          <span className="w-12 text-right text-xs font-semibold text-gray-700 shrink-0">{p.winPct.toFixed(1)}%</span>
+                          <span
+                            className="w-20 text-right text-xs text-gray-500 shrink-0"
+                            title={`${t('wp.range')}: ${p.lowPoints}–${p.highPoints}p`}
+                          >
+                            ~{p.avgPoints}p
+                          </span>
                         </li>
                       ))}
                     </ul>

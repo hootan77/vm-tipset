@@ -791,6 +791,7 @@ app.get('/api/admin/win-probabilities', (req, res) => {
       goldenGlove: bonus.golden_glove || '', tiebreaker: bonus.tiebreaker ?? null,
       overrides,
       wins: {}, // per-org fractional wins
+      totals: [], // final score in each simulation
     };
   });
 
@@ -810,10 +811,18 @@ app.get('/api/admin/win-probabilities', (req, res) => {
     orgMembers[org] = org === 'Alla' ? players : players.filter(p => p.org && p.org.split(',').includes(org));
   }
 
+  const qfWins = {}; // team -> number of sims it won its quarter-final
+
   for (let s = 0; s < sims; s++) {
     const sc = simulateScenario(adminGroupMap, adminKnockoutMap);
     const adminTeams = {};
     for (const round of Object.keys(KNOCKOUT_ROUND_POINTS)) adminTeams[round] = teamsInRoundSet(sc.bracket, round);
+
+    // Track quarter-final winners (teams that advanced from QF to SF)
+    for (const m of sc.bracket.qf || []) {
+      const w = getMatchWinner(m);
+      if (w) qfWins[w] = (qfWins[w] || 0) + 1;
+    }
     const truth = {
       topScorer: adminTopScorer || pick(tsPool),
       redCard: adminBonus.first_red_card_nation || pick(rcPool),
@@ -848,6 +857,7 @@ app.get('/api/admin/win-probabilities', (req, res) => {
       if (p.overrides.goldenGlove || eqi(p.goldenGlove, truth.goldenGlove)) total += 40;
       const tdiff = (p.tiebreaker != null && truth.tiebreaker != null) ? Math.abs(p.tiebreaker - truth.tiebreaker) : Infinity;
       p._total = total; p._exact = exact; p._tdiff = tdiff;
+      p.totals.push(total);
     }
 
     // Winner per org (total desc, exact desc, tiebreakerDiff asc); split ties fractionally
@@ -868,17 +878,30 @@ app.get('/api/admin/win-probabilities', (req, res) => {
     }
   }
 
-  // Current points (from a single no-simulation pass is complex; report win% and current standings order)
+  // Expected final points per player (mean + 10th/90th percentile range)
+  const stats = {};
+  for (const p of players) {
+    const arr = p.totals;
+    const mean = arr.reduce((n, v) => n + v, 0) / (arr.length || 1);
+    const sorted = [...arr].sort((a, b) => a - b);
+    const at = (q) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.floor(q * sorted.length)))] ?? 0;
+    stats[p.id] = { avgPoints: Math.round(mean), lowPoints: at(0.10), highPoints: at(0.90) };
+  }
+
   const result = {};
   for (const org of ORG_LIST) {
     const members = orgMembers[org];
     if (!members.length) continue;
     result[org] = members
-      .map(p => ({ id: p.id, name: p.name, winPct: (p.wins[org] / sims) * 100 }))
-      .sort((a, b) => b.winPct - a.winPct);
+      .map(p => ({ id: p.id, name: p.name, winPct: (p.wins[org] / sims) * 100, ...stats[p.id] }))
+      .sort((a, b) => b.winPct - a.winPct || b.avgPoints - a.avgPoints);
   }
 
-  res.json({ sims, orgs: result });
+  const qfTeams = Object.entries(qfWins)
+    .map(([team, wins]) => ({ team, wins, pct: (wins / sims) * 100 }))
+    .sort((a, b) => b.wins - a.wins);
+
+  res.json({ sims, orgs: result, qfTeams });
 });
 
 // ── Admin data management ──

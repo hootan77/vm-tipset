@@ -246,6 +246,8 @@ const translations = {
     'wp.hint': 'Klicka på "Beräkna" för att simulera resten av VM och räkna ut vinstsannolikheter.',
     'wp.error': 'Något gick fel vid beräkningen.',
     'wp.note': 'Baserat på inmatat facit; oavgjorda matcher simuleras slumpmässigt enligt appens poängregler.',
+    'wp.qfTitle': 'Kvartsfinalsvinnare (antal simuleringar)',
+    'wp.range': 'Intervall (10:e–90:e percentilen)',
 
     // Stale penalty winners (admin fix tool)
     'sp.title': 'Felaktiga slutspelsträd',
@@ -527,6 +529,8 @@ const translations = {
     'wp.hint': 'Click "Calculate" to simulate the rest of the World Cup and estimate win probabilities.',
     'wp.error': 'Something went wrong during the calculation.',
     'wp.note': 'Based on entered results; undecided matches are simulated at random using the app scoring rules.',
+    'wp.qfTitle': 'Quarter-final winners (number of simulations)',
+    'wp.range': 'Range (10th–90th percentile)',
 
     // Stale penalty winners (admin fix tool)
     'sp.title': 'Broken knockout trees',
