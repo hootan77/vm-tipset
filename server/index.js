@@ -330,7 +330,7 @@ app.get('/api/leaderboard', (_req, res) => {
 
   const adminBracket = computeBracketFromData(adminGroupRows, adminKnockoutRows);
   const adminTopScorer = db.prepare('SELECT player_name FROM admin_top_scorer WHERE id = 1').get();
-  const adminBonus = db.prepare('SELECT first_red_card_nation, golden_glove FROM admin_bonus WHERE id = 1').get();
+  const adminBonus = db.prepare('SELECT first_red_card_nation, golden_glove, tiebreaker FROM admin_bonus WHERE id = 1').get();
 
   const adminKnockoutById = {};
   for (const r of adminKnockoutRows) adminKnockoutById[r.match_id] = r;
@@ -524,6 +524,7 @@ app.get('/api/leaderboard', (_req, res) => {
       exactResults,
       correctOutcomes,
       totalPredictions,
+      tiebreaker: userBonus?.tiebreaker ?? null,
       tiebreakerDiff,
       nextMatchPrediction,
       lastThreePoints,
@@ -552,7 +553,7 @@ app.get('/api/leaderboard', (_req, res) => {
     homeGoals: pm.actual.homeGoals, awayGoals: pm.actual.awayGoals,
   }));
 
-  res.json({ players: leaderboard, nextMatch: nextMatchInfo, lastThreeMatches });
+  res.json({ players: leaderboard, nextMatch: nextMatchInfo, lastThreeMatches, adminTiebreaker: adminBonus?.tiebreaker ?? null });
 });
 
 // ── Top scorer ──

@@ -112,6 +112,8 @@ const translations = {
     'lb.match': 'Match',
     'lb.tbd': 'TBD',
     'lb.sortReset': 'Återställ sortering (ställning)',
+    'lb.tiebreaker': 'Utslagsfråga',
+    'lb.facit': 'Facit',
 
     // Group stage
     'group.title': 'Grupp',
@@ -400,6 +402,8 @@ const translations = {
     'lb.match': 'Match',
     'lb.tbd': 'TBD',
     'lb.sortReset': 'Reset sorting (standings)',
+    'lb.tiebreaker': 'Tiebreaker',
+    'lb.facit': 'Actual',
 
     // Group stage
     'group.title': 'Group',

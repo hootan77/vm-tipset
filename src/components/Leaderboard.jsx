@@ -14,6 +14,7 @@ export default function Leaderboard({ onViewUser }) {
   const [data, setData] = useState([]);
   const [nextMatch, setNextMatch] = useState(null);
   const [lastThreeMatches, setLastThreeMatches] = useState([]);
+  const [adminTiebreaker, setAdminTiebreaker] = useState(null);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState('Alla');
   const [orgFilter, setOrgFilter] = useState('Alla');
@@ -25,14 +26,15 @@ export default function Leaderboard({ onViewUser }) {
       setSortDir(d => (d === 'desc' ? 'asc' : 'desc'));
     } else {
       setSortKey(key);
-      setSortDir(key === 'name' || key === 'role' ? 'asc' : 'desc');
+      // closest tiebreaker first (asc), names asc, everything else desc
+      setSortDir(key === 'name' || key === 'role' || key === 'tiebreakerDiff' ? 'asc' : 'desc');
     }
   }
 
   function applyData(d) {
-    // Endpoint returns { players, nextMatch, lastThreeMatches }; tolerate a bare array too
-    if (Array.isArray(d)) { setData(d); setNextMatch(null); setLastThreeMatches([]); }
-    else { setData(d.players || []); setNextMatch(d.nextMatch || null); setLastThreeMatches(d.lastThreeMatches || []); }
+    // Endpoint returns { players, nextMatch, lastThreeMatches, adminTiebreaker }; tolerate a bare array too
+    if (Array.isArray(d)) { setData(d); setNextMatch(null); setLastThreeMatches([]); setAdminTiebreaker(null); }
+    else { setData(d.players || []); setNextMatch(d.nextMatch || null); setLastThreeMatches(d.lastThreeMatches || []); setAdminTiebreaker(d.adminTiebreaker ?? null); }
   }
 
   useEffect(() => {
@@ -113,13 +115,20 @@ export default function Leaderboard({ onViewUser }) {
         const bv = (b[sortKey] || '').toLowerCase();
         return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
       }
-      const av = a[sortKey] ?? 0;
-      const bv = b[sortKey] ?? 0;
+      const fallback = sortKey === 'tiebreakerDiff' ? Infinity : 0; // missing tiebreaker guess sorts last
+      const av = a[sortKey] ?? fallback;
+      const bv = b[sortKey] ?? fallback;
       return sortDir === 'asc' ? av - bv : bv - av;
     });
   }
 
   const sortArrow = (key) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '');
+
+  const fmtNum = (n) => (n == null ? '' : n.toLocaleString(lang === 'sv' ? 'sv-SE' : 'en-US'));
+  // The player closest on the tiebreaker (once the admin has entered the actual figure)
+  const closestId = adminTiebreaker != null
+    ? filtered.reduce((best, r) => (r.tiebreakerDiff != null && (best == null || r.tiebreakerDiff < best.diff) ? { id: r.id, diff: r.tiebreakerDiff } : best), null)?.id ?? null
+    : null;
 
   if (loading) {
     return (
@@ -204,6 +213,14 @@ export default function Leaderboard({ onViewUser }) {
                 <th onClick={() => toggleSort('exactResults')} className="text-center py-3 px-4 cursor-pointer hover:text-gray-700 select-none">{t('lb.col.exact')}{sortArrow('exactResults')}</th>
                 <th onClick={() => toggleSort('correctOutcomes')} className="text-center py-3 px-4 cursor-pointer hover:text-gray-700 select-none">{t('lb.col.outcome')}{sortArrow('correctOutcomes')}</th>
                 <th onClick={() => toggleSort('totalPredictions')} className="text-center py-3 px-4 cursor-pointer hover:text-gray-700 select-none">{t('lb.col.tips')}{sortArrow('totalPredictions')}</th>
+                {showViewButton && (
+                  <th onClick={() => toggleSort('tiebreakerDiff')} className="text-center py-3 px-4 cursor-pointer hover:text-gray-700 select-none normal-case">
+                    <div className="uppercase tracking-wider">{t('lb.tiebreaker')}{sortArrow('tiebreakerDiff')}</div>
+                    {adminTiebreaker != null && (
+                      <div className="text-[10px] text-gray-400 font-normal normal-case">{t('lb.facit')}: {fmtNum(adminTiebreaker)}</div>
+                    )}
+                  </th>
+                )}
                 {lastThreeMatches.length > 0 && (
                   <th className="text-center py-3 px-4 normal-case">
                     <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{t('lb.lastThree')}</div>
@@ -256,6 +273,20 @@ export default function Leaderboard({ onViewUser }) {
                   <td className="py-3 px-4 text-center text-gray-600">{row.exactResults}</td>
                   <td className="py-3 px-4 text-center text-gray-600">{row.correctOutcomes}</td>
                   <td className="py-3 px-4 text-center text-gray-400">{row.totalPredictions}/108</td>
+                  {showViewButton && (
+                    <td className="py-3 px-4 text-center whitespace-nowrap">
+                      {row.tiebreaker != null ? (
+                        <span className={row.id === closestId ? 'text-emerald-700 font-bold' : 'text-gray-600'}>
+                          {row.id === closestId ? '🎯 ' : ''}{fmtNum(row.tiebreaker)}
+                          {row.tiebreakerDiff != null && (
+                            <span className="text-gray-400 text-xs font-normal"> (±{fmtNum(row.tiebreakerDiff)})</span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">–</span>
+                      )}
+                    </td>
+                  )}
                   {lastThreeMatches.length > 0 && (
                     <td className="py-3 px-4">
                       <div className="flex justify-center gap-1">
